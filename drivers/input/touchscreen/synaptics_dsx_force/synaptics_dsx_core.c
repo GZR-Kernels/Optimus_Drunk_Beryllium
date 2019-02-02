@@ -34,7 +34,6 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/proc_fs.h>
 #include <linux/slab.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
@@ -65,8 +64,6 @@
 
 #define INPUT_PHYS_NAME "synaptics_dsx/touch_input"
 #define STYLUS_PHYS_NAME "synaptics_dsx/stylus"
-
-#define PROC_SYMLINK_PATH "touchpanel"
 
 #define VIRTUAL_KEY_MAP_FILE_NAME "virtualkeys." PLATFORM_DRIVER_NAME
 
@@ -776,7 +773,7 @@ static struct device_attribute attrs[] = {
 #if defined(CONFIG_SECURE_TOUCH)
 static DEVICE_ATTR(secure_touch_enable, (S_IRUGO | S_IWUSR | S_IWGRP), synaptics_secure_touch_enable_show, synaptics_secure_touch_enable_store);
 static DEVICE_ATTR(secure_touch, S_IRUGO , synaptics_secure_touch_show, NULL);
-
+#if 0
 static int synaptics_secure_touch_clk_prepare_enable(
 		struct synaptics_rmi4_data *rmi4_data)
 {
@@ -804,14 +801,15 @@ static void synaptics_secure_touch_clk_disable_unprepare(
 	clk_disable_unprepare(rmi4_data->core_clk);
 	clk_disable_unprepare(rmi4_data->iface_clk);
 }
-
+#endif
 static void synaptics_secure_touch_init(struct synaptics_rmi4_data *data)
 {
-	int ret = 0;
+	//int ret = 0;
 
 	data->st_initialized = 0;
 	init_completion(&data->st_powerdown);
 	init_completion(&data->st_irq_processed);
+#if 0
 	/* Get clocks */
 	data->core_clk = clk_get(data->pdev->dev.parent, "core_clk");
 	if (IS_ERR(data->core_clk)) {
@@ -828,13 +826,14 @@ static void synaptics_secure_touch_init(struct synaptics_rmi4_data *data)
 			"%s: error on clk_get(iface_clk)\n", __func__);
 		goto err_iface_clk;
 	}
-
+#endif
 	data->st_initialized = 1;
 	return;
-
+#if 0
 err_iface_clk:
 		clk_put(data->core_clk);
 		data->core_clk = NULL;
+#endif
 }
 static void synaptics_secure_touch_notify(struct synaptics_rmi4_data *data)
 {
@@ -925,7 +924,7 @@ static ssize_t synaptics_secure_touch_enable_store(struct device *dev,
 		if (atomic_read(&data->st_enabled) == 0)
 			break;
 
-		synaptics_secure_touch_clk_disable_unprepare(data);
+		//synaptics_secure_touch_clk_disable_unprepare(data);
 		pm_runtime_put_sync(adapter);
 		atomic_set(&data->st_enabled, 0);
 		synaptics_secure_touch_notify(data);
@@ -946,12 +945,13 @@ static ssize_t synaptics_secure_touch_enable_store(struct device *dev,
 			err = -EIO;
 			break;
 		}
-
+#if 0
 		if (synaptics_secure_touch_clk_prepare_enable(data) < 0) {
 			pm_runtime_put_sync(adapter);
 			err = -EIO;
 			break;
 		}
+#endif
 		reinit_completion(&data->st_powerdown);
 		reinit_completion(&data->st_irq_processed);
 		atomic_set(&data->st_enabled, 1);
@@ -963,6 +963,7 @@ static ssize_t synaptics_secure_touch_enable_store(struct device *dev,
 		err = -EINVAL;
 		break;
 	}
+	dev_err(data->pdev->dev.parent, "synaptics_secure_touch_enable_store err=%x\n", err);
 	return err;
 }
 
@@ -3699,6 +3700,8 @@ static void synaptics_rmi4_set_params(struct synaptics_rmi4_data *rmi4_data)
 			ABS_MT_TOUCH_MINOR, 0,
 			rmi4_data->max_touch_width, 0, 0);
 #endif
+	set_bit(KEY_SLEEP, rmi4_data->input_dev->keybit);
+	input_set_capability(rmi4_data->input_dev, EV_KEY, KEY_SLEEP);
 
 #ifdef REPORT_2D_PRESSURE
 	if (rmi4_data->report_pressure) {
@@ -3975,36 +3978,6 @@ static int synaptics_rmi4_input_event(struct input_dev *dev,
 	return 0;
 }
 
-static ssize_t synaptics_rmi4_input_symlink(struct synaptics_rmi4_data *rmi4_data) {
-	char *driver_path;
-	int ret = 0;
-
-	if (rmi4_data->input_proc) {
-		proc_remove(rmi4_data->input_proc);
-		rmi4_data->input_proc = NULL;
-	}
-
-	driver_path = kzalloc(PATH_MAX, GFP_KERNEL);
-	if (!driver_path) {
-		pr_err("%s: failed to allocate memory\n", __func__);
-		return -ENOMEM;
-	}
-
-	sprintf(driver_path, "/sys%s",
-			kobject_get_path(&rmi4_data->input_dev->dev.kobj, GFP_KERNEL));
-
-	pr_debug("%s: driver_path=%s\n", __func__, driver_path);
-
-	rmi4_data->input_proc = proc_symlink(PROC_SYMLINK_PATH, NULL, driver_path);
-	if (!rmi4_data->input_proc) {
-		ret = -ENOMEM;
-	}
-
-	kfree(driver_path);
-
-	return ret;
-}
-
 static int synaptics_rmi4_set_input_dev(struct synaptics_rmi4_data *rmi4_data)
 {
 	int retval;
@@ -4056,13 +4029,6 @@ static int synaptics_rmi4_set_input_dev(struct synaptics_rmi4_data *rmi4_data)
 				"%s: Failed to register input device\n",
 				__func__);
 		goto err_register_input;
-	}
-
-	retval = synaptics_rmi4_input_symlink(rmi4_data);
-	if (retval < 0) {
-		dev_err(rmi4_data->pdev->dev.parent,
-				"%s: Failed to symlink input device\n",
-				__func__);
 	}
 
 	if (!rmi4_data->stylus_enable)
@@ -4953,7 +4919,6 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 	rmi4_data->irq_enabled = false;
 	rmi4_data->fingers_on_2d = false;
 	rmi4_data->wakeup_en = false;
-	rmi4_data->input_proc = NULL;
 
 	rmi4_data->reset_device = synaptics_rmi4_reset_device;
 	rmi4_data->irq_enable = synaptics_rmi4_irq_enable;
