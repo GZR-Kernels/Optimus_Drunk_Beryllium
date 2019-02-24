@@ -30,6 +30,9 @@
 #define __FS_HAS_ENCRYPTION IS_ENABLED(CONFIG_F2FS_FS_ENCRYPTION)
 #include <linux/fscrypt.h>
 
+#define __FS_HAS_VERITY IS_ENABLED(CONFIG_F2FS_FS_VERITY)
+#include <linux/fsverity.h>
+
 #ifdef CONFIG_F2FS_CHECK_FS
 #define f2fs_bug_on(sbi, condition)	BUG_ON(condition)
 #else
@@ -147,7 +150,7 @@ struct f2fs_mount_info {
 #define F2FS_FEATURE_QUOTA_INO		0x0080
 #define F2FS_FEATURE_INODE_CRTIME	0x0100
 #define F2FS_FEATURE_LOST_FOUND		0x0200
-#define F2FS_FEATURE_VERITY		0x0400	/* reserved */
+#define F2FS_FEATURE_VERITY		0x0400
 
 #define F2FS_HAS_FEATURE(sb, mask)					\
 	((F2FS_SB(sb)->raw_super->feature & cpu_to_le32(mask)) != 0)
@@ -194,7 +197,7 @@ struct cp_control {
 };
 
 /*
- * indicate meta/data type
+ * For CP/NAT/SIT/SSA readahead
  */
 enum {
 	META_CP,
@@ -202,8 +205,6 @@ enum {
 	META_SIT,
 	META_SSA,
 	META_POR,
-	DATA_GENERIC,
-	META_GENERIC,
 };
 
 /* for the list of ino */
@@ -596,7 +597,7 @@ enum {
 #define FADVISE_ENC_NAME_BIT	0x08
 #define FADVISE_KEEP_SIZE_BIT	0x10
 #define FADVISE_HOT_BIT		0x20
-#define FADVISE_VERITY_BIT	0x40	/* reserved */
+#define FADVISE_VERITY_BIT	0x40
 
 #define file_is_cold(inode)	is_file(inode, FADVISE_COLD_BIT)
 #define file_wrong_pino(inode)	is_file(inode, FADVISE_LOST_PINO_BIT)
@@ -614,6 +615,8 @@ enum {
 #define file_is_hot(inode)	is_file(inode, FADVISE_HOT_BIT)
 #define file_set_hot(inode)	set_file(inode, FADVISE_HOT_BIT)
 #define file_clear_hot(inode)	clear_file(inode, FADVISE_HOT_BIT)
+#define file_is_verity(inode)	is_file(inode, FADVISE_VERITY_BIT)
+#define file_set_verity(inode)	set_file(inode, FADVISE_VERITY_BIT)
 
 #define DEF_DIR_LEVEL		0
 
@@ -1017,6 +1020,10 @@ struct f2fs_bio_info {
 	spinlock_t io_lock;		/* serialize DATA/NODE IOs */
 	struct list_head io_list;	/* track fios */
 };
+
+/* iv sector for security/pfe/pfk_fscrypt.c and f2fs */
+#define PG_DUN(i,p)                                            \
+	((((i)->i_ino & 0xffffffff) << 32) | ((p)->index & 0xffffffff))
 
 #define FDEV(i)				(sbi->devs[i])
 #define RDEV(i)				(raw_super->devs[i])
@@ -2514,17 +2521,8 @@ static inline bool is_dot_dotdot(const struct qstr *str)
 
 static inline bool f2fs_may_extent_tree(struct inode *inode)
 {
-	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
-
-	if (!test_opt(sbi, EXTENT_CACHE) ||
+	if (!test_opt(F2FS_I_SB(inode), EXTENT_CACHE) ||
 			is_inode_flag_set(inode, FI_NO_EXTENT))
-		return false;
-
-	/*
-	 * for recovered files during mount do not create extents
-	 * if shrinker is not registered.
-	 */
-	if (list_empty(&sbi->s_list))
 		return false;
 
 	return S_ISREG(inode->i_mode);
@@ -2643,39 +2641,6 @@ static inline void f2fs_update_iostat(struct f2fs_sb_info *sbi,
 			sbi->write_iostat[APP_WRITE_IO] -
 			sbi->write_iostat[APP_DIRECT_IO];
 	spin_unlock(&sbi->iostat_lock);
-}
-
-#define __is_meta_io(fio) (PAGE_TYPE_OF_BIO(fio->type) == META &&	\
-				(!is_read_io(fio->op) || fio->is_meta))
-
-bool f2fs_is_valid_blkaddr(struct f2fs_sb_info *sbi,
-					block_t blkaddr, int type);
-void f2fs_msg(struct super_block *sb, const char *level, const char *fmt, ...);
-static inline void verify_blkaddr(struct f2fs_sb_info *sbi,
-					block_t blkaddr, int type)
-{
-	if (!f2fs_is_valid_blkaddr(sbi, blkaddr, type)) {
-		f2fs_msg(sbi->sb, KERN_ERR,
-			"invalid blkaddr: %u, type: %d, run fsck to fix.",
-			blkaddr, type);
-		f2fs_bug_on(sbi, 1);
-	}
-}
-
-static inline bool __is_valid_data_blkaddr(block_t blkaddr)
-{
-	if (blkaddr == NEW_ADDR || blkaddr == NULL_ADDR)
-		return false;
-	return true;
-}
-
-static inline bool is_valid_data_blkaddr(struct f2fs_sb_info *sbi,
-						block_t blkaddr)
-{
-	if (!__is_valid_data_blkaddr(blkaddr))
-		return false;
-	verify_blkaddr(sbi, blkaddr, DATA_GENERIC);
-	return true;
 }
 
 /*
@@ -2874,7 +2839,7 @@ void allocate_data_block(struct f2fs_sb_info *sbi, struct page *page,
 			struct f2fs_io_info *fio, bool add_list);
 void f2fs_wait_on_page_writeback(struct page *page,
 			enum page_type type, bool ordered);
-void f2fs_wait_on_block_writeback(struct f2fs_sb_info *sbi, block_t blkaddr);
+void f2fs_wait_on_block_writeback(struct inode *inode, block_t blkaddr);
 void write_data_summaries(struct f2fs_sb_info *sbi, block_t start_blk);
 void write_node_summaries(struct f2fs_sb_info *sbi, block_t start_blk);
 int lookup_journal_in_cursum(struct f2fs_journal *journal, int type,
@@ -2895,8 +2860,7 @@ void f2fs_stop_checkpoint(struct f2fs_sb_info *sbi, bool end_io);
 struct page *grab_meta_page(struct f2fs_sb_info *sbi, pgoff_t index);
 struct page *get_meta_page(struct f2fs_sb_info *sbi, pgoff_t index);
 struct page *get_tmp_page(struct f2fs_sb_info *sbi, pgoff_t index);
-bool f2fs_is_valid_blkaddr(struct f2fs_sb_info *sbi,
-					block_t blkaddr, int type);
+bool is_valid_blkaddr(struct f2fs_sb_info *sbi, block_t blkaddr, int type);
 int ra_meta_pages(struct f2fs_sb_info *sbi, block_t start, int nrpages,
 			int type, bool sync);
 void ra_meta_pages_cond(struct f2fs_sb_info *sbi, pgoff_t index);
@@ -2928,6 +2892,8 @@ void destroy_checkpoint_caches(void);
 /*
  * data.c
  */
+#define F2FS_GETPAGE_FOR_WRITE		0x01
+#define F2FS_GETPAGE_SKIP_VERITY	0x02
 int f2fs_init_post_read_processing(void);
 void f2fs_destroy_post_read_processing(void);
 void f2fs_submit_merged_write(struct f2fs_sb_info *sbi, enum page_type type);
@@ -2948,8 +2914,8 @@ int f2fs_get_block(struct dnode_of_data *dn, pgoff_t index);
 int f2fs_preallocate_blocks(struct kiocb *iocb, struct iov_iter *from);
 int f2fs_reserve_block(struct dnode_of_data *dn, pgoff_t index);
 struct page *get_read_data_page(struct inode *inode, pgoff_t index,
-			int op_flags, bool for_write);
-struct page *find_data_page(struct inode *inode, pgoff_t index);
+				int op_flags, int flags);
+struct page *find_data_page(struct inode *inode, pgoff_t index, int flags);
 struct page *get_lock_data_page(struct inode *inode, pgoff_t index,
 			bool for_write);
 struct page *get_new_data_page(struct inode *inode,
@@ -3289,13 +3255,18 @@ static inline void f2fs_set_encrypted_inode(struct inode *inode)
 #endif
 }
 
+static inline bool f2fs_verity_file(struct inode *inode)
+{
+	return file_is_verity(inode);
+}
+
 /*
  * Returns true if the reads of the inode's data need to undergo some
  * postprocessing step, like decryption or authenticity verification.
  */
 static inline bool f2fs_post_read_required(struct inode *inode)
 {
-	return f2fs_encrypted_file(inode);
+	return f2fs_encrypted_file(inode) || f2fs_verity_file(inode);
 }
 
 #define F2FS_FEATURE_FUNCS(name, flagname) \
@@ -3313,6 +3284,7 @@ F2FS_FEATURE_FUNCS(flexible_inline_xattr, FLEXIBLE_INLINE_XATTR);
 F2FS_FEATURE_FUNCS(quota_ino, QUOTA_INO);
 F2FS_FEATURE_FUNCS(inode_crtime, INODE_CRTIME);
 F2FS_FEATURE_FUNCS(lost_found, LOST_FOUND);
+F2FS_FEATURE_FUNCS(verity, VERITY);
 
 #ifdef CONFIG_BLK_DEV_ZONED
 static inline int get_blkz_type(struct f2fs_sb_info *sbi,
@@ -3361,14 +3333,6 @@ static inline bool f2fs_may_encrypt(struct inode *inode)
 #endif
 }
 
-static inline bool f2fs_force_buffered_io(struct inode *inode, int rw)
-{
-	return ((f2fs_post_read_required(inode) &&
-		!fscrypt_using_hardware_encryption(inode)) ||
-			(rw == WRITE && test_opt(F2FS_I_SB(inode), LFS)) ||
-			F2FS_I_SB(inode)->s_ndevs);
-}
-
 static inline bool f2fs_may_encrypt_bio(struct inode *inode,
 		struct f2fs_io_info *fio)
 {
@@ -3377,6 +3341,15 @@ static inline bool f2fs_may_encrypt_bio(struct inode *inode,
 
 	return (f2fs_encrypted_file(inode) &&
 			fscrypt_using_hardware_encryption(inode));
+}
+
+static inline bool f2fs_force_buffered_io(struct inode *inode, int rw)
+{
+	return ((f2fs_encrypted_file(inode) &&
+			!fscrypt_using_hardware_encryption(inode)) ||
+			f2fs_verity_file(inode) ||
+			(rw == WRITE && test_opt(F2FS_I_SB(inode), LFS)) ||
+			F2FS_I_SB(inode)->s_ndevs);
 }
 
 #endif

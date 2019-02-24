@@ -68,16 +68,13 @@ static void __get_inode_rdev(struct inode *inode, struct f2fs_inode *ri)
 	}
 }
 
-static int __written_first_block(struct f2fs_sb_info *sbi,
-					struct f2fs_inode *ri)
+static bool __written_first_block(struct f2fs_inode *ri)
 {
 	block_t addr = le32_to_cpu(ri->i_addr[offset_in_addr(ri)]);
 
-	if (!__is_valid_data_blkaddr(addr))
-		return 1;
-	if (!f2fs_is_valid_blkaddr(sbi, addr, DATA_GENERIC))
-		return -EFAULT;
-	return 0;
+	if (addr != NEW_ADDR && addr != NULL_ADDR)
+		return true;
+	return false;
 }
 
 static void __set_inode_rdev(struct inode *inode, struct f2fs_inode *ri)
@@ -188,69 +185,6 @@ void f2fs_inode_chksum_set(struct f2fs_sb_info *sbi, struct page *page)
 	ri->i_inode_checksum = cpu_to_le32(f2fs_inode_chksum(sbi, page));
 }
 
-static bool sanity_check_inode(struct inode *inode, struct page *node_page)
-{
-	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
-	unsigned long long iblocks;
-
-	iblocks = le64_to_cpu(F2FS_INODE(node_page)->i_blocks);
-	if (!iblocks) {
-		set_sbi_flag(sbi, SBI_NEED_FSCK);
-		f2fs_msg(sbi->sb, KERN_WARNING,
-			"%s: corrupted inode i_blocks i_ino=%lx iblocks=%llu, "
-			"run fsck to fix.",
-			__func__, inode->i_ino, iblocks);
-		return false;
-	}
-
-	if (ino_of_node(node_page) != nid_of_node(node_page)) {
-		set_sbi_flag(sbi, SBI_NEED_FSCK);
-		f2fs_msg(sbi->sb, KERN_WARNING,
-			"%s: corrupted inode footer i_ino=%lx, ino,nid: "
-			"[%u, %u] run fsck to fix.",
-			__func__, inode->i_ino,
-			ino_of_node(node_page), nid_of_node(node_page));
-		return false;
-	}
-
-	if (f2fs_sb_has_flexible_inline_xattr(sbi->sb)
-			&& !f2fs_has_extra_attr(inode)) {
-		set_sbi_flag(sbi, SBI_NEED_FSCK);
-		f2fs_msg(sbi->sb, KERN_WARNING,
-			"%s: corrupted inode ino=%lx, run fsck to fix.",
-			__func__, inode->i_ino);
-		return false;
-	}
-
-	if (f2fs_has_extra_attr(inode) &&
-			!f2fs_sb_has_extra_attr(sbi->sb)) {
-		set_sbi_flag(sbi, SBI_NEED_FSCK);
-		f2fs_msg(sbi->sb, KERN_WARNING,
-			"%s: inode (ino=%lx) is with extra_attr, "
-			"but extra_attr feature is off",
-			__func__, inode->i_ino);
-		return false;
-	}
-
-	if (F2FS_I(inode)->extent_tree) {
-		struct extent_info *ei = &F2FS_I(inode)->extent_tree->largest;
-
-		if (ei->len &&
-			(!f2fs_is_valid_blkaddr(sbi, ei->blk, DATA_GENERIC) ||
-			!f2fs_is_valid_blkaddr(sbi, ei->blk + ei->len - 1,
-							DATA_GENERIC))) {
-			set_sbi_flag(sbi, SBI_NEED_FSCK);
-			f2fs_msg(sbi->sb, KERN_WARNING,
-				"%s: inode (ino=%lx) extent info [%u, %u, %u] "
-				"is incorrect, run fsck to fix",
-				__func__, inode->i_ino,
-				ei->blk, ei->fofs, ei->len);
-			return false;
-		}
-	}
-	return true;
-}
-
 static int do_read_inode(struct inode *inode)
 {
 	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
@@ -258,7 +192,6 @@ static int do_read_inode(struct inode *inode)
 	struct page *node_page;
 	struct f2fs_inode *ri;
 	projid_t i_projid;
-	int err;
 
 	/* Check if ino is within scope */
 	if (check_nid_range(sbi, inode->i_ino)) {
@@ -302,15 +235,11 @@ static int do_read_inode(struct inode *inode)
 
 	get_inline_info(inode, ri);
 
-	if (!sanity_check_inode(inode, node_page)) {
-		f2fs_put_page(node_page, 1);
-		return -EINVAL;
-	}
-
 	fi->i_extra_isize = f2fs_has_extra_attr(inode) ?
 					le16_to_cpu(ri->i_extra_isize) : 0;
 
 	if (f2fs_sb_has_flexible_inline_xattr(sbi->sb)) {
+		f2fs_bug_on(sbi, !f2fs_has_extra_attr(inode));
 		fi->i_inline_xattr_size = le16_to_cpu(ri->i_inline_xattr_size);
 	} else if (f2fs_has_inline_xattr(inode) ||
 				f2fs_has_inline_dentry(inode)) {
@@ -333,12 +262,7 @@ static int do_read_inode(struct inode *inode)
 	/* get rdev by using inline_info */
 	__get_inode_rdev(inode, ri);
 
-	err = __written_first_block(sbi, ri);
-	if (err < 0) {
-		f2fs_put_page(node_page, 1);
-		return err;
-	}
-	if (!err)
+	if (__written_first_block(ri))
 		set_inode_flag(inode, FI_FIRST_BLOCK_WRITTEN);
 
 	if (!need_inode_block_update(sbi, inode->i_ino))
@@ -466,7 +390,7 @@ void update_inode(struct inode *inode, struct page *node_page)
 	ri->i_uid = cpu_to_le32(i_uid_read(inode));
 	ri->i_gid = cpu_to_le32(i_gid_read(inode));
 	ri->i_links = cpu_to_le32(inode->i_nlink);
-	ri->i_size = cpu_to_le64(i_size_read(inode));
+	ri->i_size = cpu_to_le64(fsverity_full_isize(inode));
 	ri->i_blocks = cpu_to_le64(SECTOR_TO_BLOCK(inode->i_blocks) + 1);
 
 	if (et) {
@@ -669,6 +593,7 @@ no_delete:
 	}
 out_clear:
 	fscrypt_put_encryption_info(inode);
+	fsverity_cleanup_inode(inode);
 	clear_inode(inode);
 }
 

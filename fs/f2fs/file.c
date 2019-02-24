@@ -113,8 +113,7 @@ mapped:
 	f2fs_wait_on_page_writeback(page, DATA, false);
 
 	/* wait for GCed page writeback via META_MAPPING */
-	if (f2fs_post_read_required(inode))
-		f2fs_wait_on_block_writeback(sbi, dn.data_blkaddr);
+	f2fs_wait_on_block_writeback(inode, dn.data_blkaddr);
 
 out_sem:
 	up_read(&F2FS_I(inode)->i_mmap_sem);
@@ -219,9 +218,6 @@ static int f2fs_do_sync_file(struct file *file, loff_t start, loff_t end,
 
 	trace_f2fs_sync_file_enter(inode);
 
-	if (S_ISDIR(inode->i_mode))
-		goto go_write;
-
 	/* if fdatasync is triggered, let's do in-place-update */
 	if (datasync || get_dirty_pages(inode) <= SM_I(sbi)->min_fsync_blocks)
 		set_inode_flag(inode, FI_NEED_IPU);
@@ -229,6 +225,9 @@ static int f2fs_do_sync_file(struct file *file, loff_t start, loff_t end,
 	clear_inode_flag(inode, FI_NEED_IPU);
 
 	if (ret) {
+		f2fs_msg(sbi->sb, KERN_WARNING,
+			"filemap_write failed %d dsync=%d atomic=%d",
+			ret, datasync, atomic);
 		trace_f2fs_sync_file_exit(inode, cp_reason, datasync, ret);
 		return ret;
 	}
@@ -266,6 +265,10 @@ go_write:
 	if (cp_reason) {
 		/* all the dirty node pages should be flushed for POR */
 		ret = f2fs_sync_fs(inode->i_sb, 1);
+		if (ret)
+			f2fs_msg(sbi->sb, KERN_WARNING,
+				"f2fs_sync_fs failed %d dsync=%d atomic=%d",
+				ret, datasync, atomic);
 
 		/*
 		 * We've secured consistency through sync_fs. Following pino
@@ -278,8 +281,12 @@ go_write:
 	}
 sync_nodes:
 	ret = fsync_node_pages(sbi, inode, &wbc, atomic);
-	if (ret)
+	if (ret) {
+		f2fs_msg(sbi->sb, KERN_WARNING,
+				"fsync_node_pages failed %d dsync=%d atomic=%d",
+				ret, datasync, atomic);
 		goto out;
+	}
 
 	/* if cp_error was enabled, we should avoid infinite loop */
 	if (unlikely(f2fs_cp_error(sbi))) {
@@ -303,16 +310,25 @@ sync_nodes:
 	 */
 	if (!atomic) {
 		ret = wait_on_node_pages_writeback(sbi, ino);
-		if (ret)
+		if (ret) {
+			f2fs_msg(sbi->sb, KERN_WARNING,
+				"wait_on_node failed %d dsync=%d atomic=%d",
+				ret, datasync, atomic);
 			goto out;
+		}
 	}
 
 	/* once recovery info is written, don't need to tack this */
 	remove_ino_entry(sbi, ino, APPEND_INO);
 	clear_inode_flag(inode, FI_APPEND_WRITE);
 flush_out:
-	if (!atomic && F2FS_OPTION(sbi).fsync_mode != FSYNC_MODE_NOBARRIER)
+	if (!atomic && F2FS_OPTION(sbi).fsync_mode != FSYNC_MODE_NOBARRIER) {
 		ret = f2fs_issue_flush(sbi, inode->i_ino);
+		if (ret)
+			f2fs_msg(sbi->sb, KERN_WARNING,
+				"f2fs_issue_flush failed %d dsync=%d atomic=%d",
+				ret, datasync, atomic);
+	}
 	if (!ret) {
 		remove_ino_entry(sbi, ino, UPDATE_INO);
 		clear_inode_flag(inode, FI_UPDATE_WRITE);
@@ -350,13 +366,13 @@ static pgoff_t __get_first_dirty_index(struct address_space *mapping,
 	return pgofs;
 }
 
-static bool __found_offset(struct f2fs_sb_info *sbi, block_t blkaddr,
-				pgoff_t dirty, pgoff_t pgofs, int whence)
+static bool __found_offset(block_t blkaddr, pgoff_t dirty, pgoff_t pgofs,
+							int whence)
 {
 	switch (whence) {
 	case SEEK_DATA:
 		if ((blkaddr == NEW_ADDR && dirty == pgofs) ||
-			is_valid_data_blkaddr(sbi, blkaddr))
+			(blkaddr != NEW_ADDR && blkaddr != NULL_ADDR))
 			return true;
 		break;
 	case SEEK_HOLE:
@@ -419,15 +435,7 @@ static loff_t f2fs_seek_block(struct file *file, loff_t offset, int whence)
 			blkaddr = datablock_addr(dn.inode,
 					dn.node_page, dn.ofs_in_node);
 
-			if (__is_valid_data_blkaddr(blkaddr) &&
-				!f2fs_is_valid_blkaddr(F2FS_I_SB(inode),
-						blkaddr, DATA_GENERIC)) {
-				f2fs_put_dnode(&dn);
-				goto fail;
-			}
-
-			if (__found_offset(F2FS_I_SB(inode), blkaddr, dirty,
-							pgofs, whence)) {
+			if (__found_offset(blkaddr, dirty, pgofs, whence)) {
 				f2fs_put_dnode(&dn);
 				goto found;
 			}
@@ -493,6 +501,12 @@ static int f2fs_file_open(struct inode *inode, struct file *filp)
 	if (err)
 		return err;
 
+	if (f2fs_verity_file(inode)) {
+		err = fsverity_file_open(inode, filp);
+		if (err)
+			return err;
+	}
+
 	filp->f_mode |= FMODE_NOWAIT;
 
 	return dquot_file_open(inode, filp);
@@ -519,11 +533,6 @@ void truncate_data_blocks_range(struct dnode_of_data *dn, int count)
 
 		dn->data_blkaddr = NULL_ADDR;
 		set_data_blkaddr(dn);
-
-		if (__is_valid_data_blkaddr(blkaddr) &&
-			!f2fs_is_valid_blkaddr(sbi, blkaddr, DATA_GENERIC))
-			continue;
-
 		invalidate_blocks(sbi, blkaddr);
 		if (dn->ofs_in_node == 0 && IS_INODE(dn->node_page))
 			clear_inode_flag(dn->inode, FI_FIRST_BLOCK_WRITTEN);
@@ -722,6 +731,23 @@ int f2fs_getattr(struct vfsmount *mnt,
 				  STATX_ATTR_IMMUTABLE |
 				  STATX_ATTR_NODUMP);
 #endif
+
+	if (f2fs_verity_file(inode)) {
+		/*
+		 * For fs-verity we need to override i_size with the original
+		 * data i_size.  This requires I/O to the file which with
+		 * fscrypt requires that the key be set up.  But, if the key is
+		 * unavailable just continue on without the i_size override.
+		 */
+		int err = fscrypt_require_key(inode);
+
+		if (err != -ENOKEY) {
+			err = fsverity_prepare_getattr(inode);
+			if (err)
+				return err;
+		}
+	}
+
 	generic_fillattr(inode, stat);
 
 	/* we need to show initial sectors used for inline_data/dentries */
@@ -778,6 +804,12 @@ int f2fs_setattr(struct dentry *dentry, struct iattr *attr)
 	err = fscrypt_prepare_setattr(dentry, attr);
 	if (err)
 		return err;
+
+	if (f2fs_verity_file(inode)) {
+		err = fsverity_prepare_setattr(dentry, attr);
+		if (err)
+			return err;
+	}
 
 	if (is_quota_modification(inode, attr)) {
 		err = dquot_initialize(inode);
@@ -1680,8 +1712,6 @@ static int f2fs_ioc_start_atomic_write(struct file *filp)
 
 	inode_lock(inode);
 
-	down_write(&F2FS_I(inode)->dio_rwsem[WRITE]);
-
 	if (f2fs_is_atomic_file(inode))
 		goto out;
 
@@ -1711,7 +1741,6 @@ inc_stat:
 	stat_inc_atomic_write(inode);
 	stat_update_max_atomic_write(inode);
 out:
-	up_write(&F2FS_I(inode)->dio_rwsem[WRITE]);
 	inode_unlock(inode);
 	mnt_drop_write_file(filp);
 	return ret;
@@ -1856,7 +1885,7 @@ static int f2fs_ioc_shutdown(struct file *filp, unsigned long arg)
 	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
 	struct super_block *sb = sbi->sb;
 	__u32 in;
-	int ret = 0;
+	int ret;
 
 	if (!capable(CAP_SYS_ADMIN))
 		return -EPERM;
@@ -1864,11 +1893,9 @@ static int f2fs_ioc_shutdown(struct file *filp, unsigned long arg)
 	if (get_user(in, (__u32 __user *)arg))
 		return -EFAULT;
 
-	if (in != F2FS_GOING_DOWN_FULLSYNC) {
-		ret = mnt_want_write_file(filp);
-		if (ret)
-			return ret;
-	}
+	ret = mnt_want_write_file(filp);
+	if (ret)
+		return ret;
 
 	switch (in) {
 	case F2FS_GOING_DOWN_FULLSYNC:
@@ -1909,8 +1936,7 @@ static int f2fs_ioc_shutdown(struct file *filp, unsigned long arg)
 
 	f2fs_update_time(sbi, REQ_TIME);
 out:
-	if (in != F2FS_GOING_DOWN_FULLSYNC)
-		mnt_drop_write_file(filp);
+	mnt_drop_write_file(filp);
 	return ret;
 }
 
@@ -2651,6 +2677,27 @@ static int f2fs_ioc_precache_extents(struct file *filp, unsigned long arg)
 	return f2fs_precache_extents(file_inode(filp));
 }
 
+static int f2fs_ioc_enable_verity(struct file *filp, unsigned long arg)
+{
+	struct inode *inode = file_inode(filp);
+
+	f2fs_update_time(F2FS_I_SB(inode), REQ_TIME);
+
+	if (!f2fs_sb_has_verity(inode->i_sb)) {
+		f2fs_msg(inode->i_sb, KERN_WARNING,
+			 "Can't enable fs-verity on inode %lu: the fs-verity feature is disabled on this filesystem.\n",
+			 inode->i_ino);
+		return -EOPNOTSUPP;
+	}
+
+	return fsverity_ioctl_enable(filp, (const void __user *)arg);
+}
+
+static int f2fs_ioc_set_verity_measurement(struct file *filp, unsigned long arg)
+{
+	return fsverity_ioctl_set_measurement(filp, (const void __user *)arg);
+}
+
 long f2fs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	if (unlikely(f2fs_cp_error(F2FS_I_SB(file_inode(filp)))))
@@ -2703,6 +2750,10 @@ long f2fs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return f2fs_ioc_set_pin_file(filp, arg);
 	case F2FS_IOC_PRECACHE_EXTENTS:
 		return f2fs_ioc_precache_extents(filp, arg);
+	case FS_IOC_ENABLE_VERITY:
+		return f2fs_ioc_enable_verity(filp, arg);
+	case FS_IOC_SET_VERITY_MEASUREMENT:
+		return f2fs_ioc_set_verity_measurement(filp, arg);
 	default:
 		return -ENOTTY;
 	}
@@ -2808,6 +2859,8 @@ long f2fs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case F2FS_IOC_GET_PIN_FILE:
 	case F2FS_IOC_SET_PIN_FILE:
 	case F2FS_IOC_PRECACHE_EXTENTS:
+	case FS_IOC_ENABLE_VERITY:
+	case FS_IOC_SET_VERITY_MEASUREMENT:
 		break;
 	default:
 		return -ENOIOCTLCMD;

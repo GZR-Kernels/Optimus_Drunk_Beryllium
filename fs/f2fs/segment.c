@@ -230,8 +230,6 @@ static int __revoke_inmem_pages(struct inode *inode,
 
 		lock_page(page);
 
-		f2fs_wait_on_page_writeback(page, DATA, true);
-
 		if (recover) {
 			struct dnode_of_data dn;
 			struct node_info ni;
@@ -480,9 +478,6 @@ void f2fs_balance_fs(struct f2fs_sb_info *sbi, bool need)
 
 void f2fs_balance_fs_bg(struct f2fs_sb_info *sbi)
 {
-	if (unlikely(is_sbi_flag_set(sbi, SBI_POR_DOING)))
-		return;
-
 	/* try to shrink extent cache when there is no enough memory */
 	if (!available_free_memory(sbi, EXTENT_CACHE))
 		f2fs_shrink_extent_tree(sbi, EXTENT_CACHE_SHRINK_NUMBER);
@@ -1892,7 +1887,7 @@ bool is_checkpointed_data(struct f2fs_sb_info *sbi, block_t blkaddr)
 	struct seg_entry *se;
 	bool is_cp = false;
 
-	if (!is_valid_data_blkaddr(sbi, blkaddr))
+	if (blkaddr == NEW_ADDR || blkaddr == NULL_ADDR)
 		return true;
 
 	down_read(&sit_i->sentry_lock);
@@ -2439,23 +2434,24 @@ int f2fs_trim_fs(struct f2fs_sb_info *sbi, struct fstrim_range *range)
 	if (err)
 		goto out;
 
-	start_block = START_BLOCK(sbi, start_segno);
-	end_block = START_BLOCK(sbi, end_segno + 1);
-
-	__init_discard_policy(sbi, &dpolicy, DPOLICY_FSTRIM, cpc.trim_minlen);
-	__issue_discard_cmd_range(sbi, &dpolicy, start_block, end_block);
-
 	/*
 	 * We filed discard candidates, but actually we don't need to wait for
 	 * all of them, since they'll be issued in idle time along with runtime
 	 * discard option. User configuration looks like using runtime discard
 	 * or periodic fstrim instead of it.
 	 */
-	if (!test_opt(sbi, DISCARD)) {
-		trimmed = __wait_discard_cmd_range(sbi, &dpolicy,
+	if (test_opt(sbi, DISCARD))
+		goto out;
+
+	start_block = START_BLOCK(sbi, start_segno);
+	end_block = START_BLOCK(sbi, end_segno + 1);
+
+	__init_discard_policy(sbi, &dpolicy, DPOLICY_FSTRIM, cpc.trim_minlen);
+	__issue_discard_cmd_range(sbi, &dpolicy, start_block, end_block);
+
+	trimmed = __wait_discard_cmd_range(sbi, &dpolicy,
 					start_block, end_block);
-		range->len = F2FS_BLK_TO_BYTES(trimmed);
-	}
+	range->len = F2FS_BLK_TO_BYTES(trimmed);
 out:
 	return err;
 }
@@ -2950,11 +2946,15 @@ void f2fs_wait_on_page_writeback(struct page *page,
 	}
 }
 
-void f2fs_wait_on_block_writeback(struct f2fs_sb_info *sbi, block_t blkaddr)
+void f2fs_wait_on_block_writeback(struct inode *inode, block_t blkaddr)
 {
+	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
 	struct page *cpage;
 
-	if (!is_valid_data_blkaddr(sbi, blkaddr))
+	if (!f2fs_post_read_required(inode))
+		return;
+
+	if (blkaddr == NEW_ADDR || blkaddr == NULL_ADDR)
 		return;
 
 	cpage = find_lock_page(META_MAPPING(sbi), blkaddr);
@@ -3669,15 +3669,6 @@ static int build_sit_entries(struct f2fs_sb_info *sbi)
 		unsigned int old_valid_blocks;
 
 		start = le32_to_cpu(segno_in_journal(journal, i));
-		if (start >= MAIN_SEGS(sbi)) {
-			f2fs_msg(sbi->sb, KERN_ERR,
-					"Wrong journal entry on segno %u",
-					start);
-			set_sbi_flag(sbi, SBI_NEED_FSCK);
-			err = -EINVAL;
-			break;
-		}
-
 		se = &sit_i->sentries[start];
 		sit = sit_in_journal(journal, i);
 
