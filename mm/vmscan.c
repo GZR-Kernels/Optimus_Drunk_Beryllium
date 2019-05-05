@@ -47,6 +47,7 @@
 #include <linux/prefetch.h>
 #include <linux/printk.h>
 #include <linux/dax.h>
+#include <linux/simple_lmk.h>
 
 #include <asm/tlbflush.h>
 #include <asm/div64.h>
@@ -3232,6 +3233,9 @@ static bool prepare_kswapd_sleep(pg_data_t *pgdat, int order, int classzone_idx)
 
 	if (pgdat_balanced(pgdat, order, classzone_idx)) {
 		clear_pgdat_congested(pgdat);
+#ifdef CONFIG_ANDROID_SIMPLE_LMK
+		simple_lmk_stop_reclaim();
+#endif
 		return true;
 	}
 
@@ -3334,6 +3338,11 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 		bool raise_priority = true;
 
 		sc.reclaim_idx = classzone_idx;
+
+#ifdef CONFIG_ANDROID_SIMPLE_LMK
+		if (sc.priority == CONFIG_ANDROID_SIMPLE_LMK_AGGRESSION)
+			simple_lmk_start_reclaim();
+#endif
 
 		/*
 		 * If the number of buffer_heads exceeds the maximum allowed
