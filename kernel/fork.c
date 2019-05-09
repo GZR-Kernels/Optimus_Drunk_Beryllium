@@ -897,8 +897,8 @@ static inline void __mmput(struct mm_struct *mm)
 	}
 	if (mm->binfmt)
 		module_put(mm->binfmt->module);
-	mmdrop(mm);
 	simple_lmk_mm_freed(mm);
+	mmdrop(mm);
 }
 
 /*
