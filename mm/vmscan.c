@@ -3233,9 +3233,7 @@ static bool prepare_kswapd_sleep(pg_data_t *pgdat, int order, int classzone_idx)
 
 	if (pgdat_balanced(pgdat, order, classzone_idx)) {
 		clear_pgdat_congested(pgdat);
-#ifdef CONFIG_ANDROID_SIMPLE_LMK
 		simple_lmk_stop_reclaim();
-#endif
 		return true;
 	}
 
@@ -3339,10 +3337,7 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 
 		sc.reclaim_idx = classzone_idx;
 
-#ifdef CONFIG_ANDROID_SIMPLE_LMK
-		if (sc.priority == CONFIG_ANDROID_SIMPLE_LMK_AGGRESSION)
-			simple_lmk_start_reclaim();
-#endif
+		simple_lmk_decide_reclaim(sc.priority);
 
 		/*
 		 * If the number of buffer_heads exceeds the maximum allowed
