@@ -26,6 +26,18 @@ ramdisk_compression=auto;
 # import patching functions/variables - see for reference
 . /tmp/anykernel/tools/ak2-core.sh;
 
+## AnyKernel permissions
+# set permissions for included ramdisk files
+chmod -R 750 $ramdisk/*;
+chown -R root:root $ramdisk/*;
+
+## AnyKernel install
+dump_boot;
+
+backup_file init.rc;
+
+insert_line init.rc "init.optimus.rc" after "import /init.usb.configfs.rc" "import /init.optimus.rc";
+
 # Display if using MIUI or a custom ROM
 is_miui="$(file_getprop /system/build.prop 'ro.miui.ui.version.code')"
 if [[ -z $is_miui ]]; then
@@ -33,9 +45,6 @@ if [[ -z $is_miui ]]; then
 else
     ui_print "You are running MIUI!"
 fi
-
-## AnyKernel install
-dump_boot;
 
 write_boot;
 
