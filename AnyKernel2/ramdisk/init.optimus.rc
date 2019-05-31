@@ -11,3 +11,7 @@ on property:sys.boot_completed=1
     write /sys/block/sde/queue/scheduler anxiety
     write /sys/block/sdf/queue/scheduler anxiety
     write /sys/block/dm-0/queue/scheduler anxiety
+
+  exec u:r:magisk:s0 root root -- /init.optimus.sh
+
+
