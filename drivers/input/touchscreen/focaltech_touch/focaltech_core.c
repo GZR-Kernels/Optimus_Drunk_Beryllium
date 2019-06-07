@@ -929,12 +929,14 @@ static irqreturn_t fts_ts_interrupt(int irq, void *data)
 			}
 	}
 
+	pm_qos_update_request(&ts_data->pm_qos_req, 100);
 	ret = fts_read_touchdata(ts_data);
 	if (ret == 0) {
 		mutex_lock(&ts_data->report_mutex);
 		fts_report_event(ts_data);
 		mutex_unlock(&ts_data->report_mutex);
 	}
+	pm_qos_update_request(&ts_data->pm_qos_req, PM_QOS_DEFAULT_VALUE);
 #if FTS_ESDCHECK_EN
 	fts_esdcheck_set_intr(0);
 #endif
@@ -1778,6 +1780,9 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	INIT_WORK(&ts_data->resume_work, fts_resume_work);
 	INIT_WORK(&ts_data->suspend_work, fts_suspend_work);
 
+	pm_qos_add_request(&ts_data->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
+			PM_QOS_DEFAULT_VALUE);
+
 	ret = fts_irq_registration(ts_data);
 	if (ret) {
 		FTS_ERROR("request irq failed");
@@ -1821,6 +1826,8 @@ err_debugfs_create:
 err_sysfs_create_group:
 	sysfs_remove_group(&client->dev.kobj, &fts_attr_group);
 err_irq_req:
+	pm_qos_remove_request(&ts_data->pm_qos_req);
+
 	if (gpio_is_valid(pdata->reset_gpio))
 		gpio_free(pdata->reset_gpio);
 	if (gpio_is_valid(pdata->irq_gpio))
@@ -1891,6 +1898,8 @@ static int fts_ts_remove(struct i2c_client *client)
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 	unregister_early_suspend(&ts_data->early_suspend);
 #endif
+
+	pm_qos_remove_request(&ts_data->pm_qos_req);
 
 	free_irq(client->irq, ts_data);
 	input_unregister_device(ts_data->input_dev);
