@@ -10,8 +10,7 @@ KERNEL_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/aarch64-linux-gnu/bin/aarch64-linu
 CLANG_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/clang-r353983c/bin/clang-9
 ARM32_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
 KERNEL_DEFCONFIG=beryllium_defconfig
-JOBS=16
-ANY_KERNEL2_DIR=$KERNEL_DIR/AnyKernel2/
+ANY_KERNEL3_DIR=$KERNEL_DIR/AnyKernel3/
 FINAL_KERNEL_ZIP=Optimus_Drunk_Beryllium-$DATE_POSTFIX.zip
 # Speed up build process
 MAKE="./makeparallel"
@@ -32,37 +31,38 @@ export KBUILD_COMPILER_STRING="Clang Version 9.0.3"
 
 # Clean build always lol
 echo "**** Cleaning ****"
-make clean && make mrproper && rm -rf out/
+mkdir -p out
+make O=out clean
 
 echo "**** Kernel defconfig is set to $KERNEL_DEFCONFIG ****"
 echo -e "$blue***********************************************"
 echo "          BUILDING KERNEL          "
 echo -e "***********************************************$nocol"
 make $KERNEL_DEFCONFIG O=out
-make -j$JOBS CC=$CLANG_TOOLCHAIN CLANG_TRIPLE=aarch64-linux-gnu- O=out
+make -j$(nproc --all) CC=$CLANG_TOOLCHAIN CLANG_TRIPLE=aarch64-linux-gnu- O=out
 
 echo "**** Verify Image.gz-dtb ****"
 ls $KERNEL_DIR/out/arch/arm64/boot/Image.gz-dtb
 
 #Anykernel 2 time!!
-echo "**** Verifying Anykernel2 Directory ****"
-ls $ANY_KERNEL2_DIR
+echo "**** Verifying AnyKernel3 Directory ****"
+ls $ANY_KERNEL3_DIR
 echo "**** Removing leftovers ****"
-rm -rf $ANY_KERNEL2_DIR/Image.gz-dtb
-rm -rf $ANY_KERNEL2_DIR/$FINAL_KERNEL_ZIP
+rm -rf $ANY_KERNEL3_DIR/Image.gz-dtb
+rm -rf $ANY_KERNEL3_DIR/$FINAL_KERNEL_ZIP
 
 echo "**** Copying Image.gz-dtb ****"
-cp $KERNEL_DIR/out/arch/arm64/boot/Image.gz-dtb $ANY_KERNEL2_DIR/
+cp $KERNEL_DIR/out/arch/arm64/boot/Image.gz-dtb $ANY_KERNEL3_DIR/
 
 echo "**** Time to zip up! ****"
-cd $ANY_KERNEL2_DIR/
+cd $ANY_KERNEL3_DIR/
 zip -r9 $FINAL_KERNEL_ZIP * -x README $FINAL_KERNEL_ZIP
-cp $KERNEL_DIR/AnyKernel2/$FINAL_KERNEL_ZIP $ANDROIDDIR/kernel/$FINAL_KERNEL_ZIP
+cp $KERNEL_DIR/AnyKernel3/$FINAL_KERNEL_ZIP $ANDROIDDIR/kernel/$FINAL_KERNEL_ZIP
 
 echo "**** Good Bye!! ****"
 cd $KERNEL_DIR
-rm -rf $ANY_KERNEL2_DIR/$FINAL_KERNEL_ZIP
-rm -rf AnyKernel2/Image.gz-dtb
+rm -rf $ANY_KERNEL3_DIR/$FINAL_KERNEL_ZIP
+rm -rf AnyKernel3/Image.gz-dtb
 rm -rf $KERNEL_DIR/out/
 
 BUILD_END=$(date +"%s")
