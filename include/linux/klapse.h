@@ -33,7 +33,7 @@ typedef unsigned short col_type_t;
 
 #define MIN_SCALE 20 /* Minimum value of RGB recommended */
 
-#define MAX_BRIGHTNESS 1023 /* Maximum display brightness */
+#define MAX_BRIGHTNESS 4095 /* Maximum display brightness */
 
 #define MIN_BRIGHTNESS 2 /* Minimum display brightness */
 
