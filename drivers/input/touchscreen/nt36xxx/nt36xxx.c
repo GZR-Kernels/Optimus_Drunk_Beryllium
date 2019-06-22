@@ -72,9 +72,6 @@ static void nvt_resume_work(struct work_struct *work);
 
 #if defined(CONFIG_DRM)
 static int drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-static void nvt_ts_early_suspend(struct early_suspend *h);
-static void nvt_ts_late_resume(struct early_suspend *h);
 #endif
 
 #define INPUT_EVENT_START			0
@@ -1834,15 +1831,6 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 		NVT_ERR("register drm_notifier failed. ret=%d\n", ret);
 		goto err_register_drm_notif_failed;
 	}
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-	ts->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
-	ts->early_suspend.suspend = nvt_ts_early_suspend;
-	ts->early_suspend.resume = nvt_ts_late_resume;
-	ret = register_early_suspend(&ts->early_suspend);
-	if (ret) {
-		NVT_ERR("register early suspend failed. ret=%d\n", ret);
-		goto err_register_early_suspend_failed;
-	}
 #endif
 
 	ts->attrs.attrs = nvt_attr_group;
@@ -1881,8 +1869,6 @@ err_pm_workqueue:
 #if defined(CONFIG_DRM)
 err_register_drm_notif_failed:
 	drm_unregister_client(&ts->notifier);
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-err_register_early_suspend_failed:
 #endif
 #if (NVT_TOUCH_PROC || NVT_TOUCH_EXT_PROC || NVT_TOUCH_MP)
 err_init_NVT_ts:
@@ -1922,8 +1908,6 @@ static int32_t nvt_ts_remove(struct i2c_client *client)
 #if defined(CONFIG_DRM)
 	if (drm_unregister_client(&ts->notifier))
 		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-	unregister_early_suspend(&ts->early_suspend);
 #endif
 	destroy_workqueue(ts->event_wq);
 
@@ -2159,30 +2143,6 @@ static const struct dev_pm_ops nvt_dev_pm_ops = {
 	.suspend = nvt_pm_suspend,
 	.resume = nvt_pm_resume,
 };
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-/*******************************************************
-Description:
-	Novatek touchscreen driver early suspend function.
-
-return:
-	n.a.
-*******************************************************/
-static void nvt_ts_early_suspend(struct early_suspend *h)
-{
-	nvt_ts_suspend(ts->client, PMSG_SUSPEND);
-}
-
-/*******************************************************
-Description:
-	Novatek touchscreen driver late resume function.
-
-return:
-	n.a.
-*******************************************************/
-static void nvt_ts_late_resume(struct early_suspend *h)
-{
-	nvt_ts_resume(ts->client);
-}
 #endif
 
 static const struct i2c_device_id nvt_ts_id[] = {
