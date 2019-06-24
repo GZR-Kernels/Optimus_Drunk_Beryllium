@@ -678,6 +678,10 @@
 	};
 };
 
+&bcl_sensor {
+	status = "disabled";
+};
+
 &pm8998_adc_tm {
 	chan@83 {
 		label = "vph_pwr";
@@ -767,110 +771,12 @@
 	};
 };
 
-&low_vbat {
-	temperature = <3200>;
-	hysteresis = <100>;
-	type = "passive";
-};
-
-&low_soc {
-	temperature = <10>;
-	hysteresis = <0>;
-	type = "passive";
-};
-
-&ibat_high {
-	temperature = <5000>;
-	hysteresis = <200>;
-	type = "passive";
-};
-
 &thermal_zones {
-	vbat {
-		polling-delay-passive = <100>;
-
-		cooling-maps {
-			vbat_cpu4 {
-				trip = <&low_vbat>;
-				cooling-device =
-					<&CPU4 18 18>;
-			};
-			vbat_cpu5 {
-				trip = <&low_vbat>;
-				cooling-device =
-					<&CPU5 18 18>;
-			};
-			vbat_map6 {
-				trip = <&low_vbat>;
-				cooling-device =
-					<&CPU6 18 18>;
-			};
-			vbat_map7 {
-				trip = <&low_vbat>;
-				cooling-device =
-					<&CPU7 18 18>;
-			};
-		};
-	};
-
-	soc {
-		polling-delay-passive = <0>;
-
-		cooling-maps {
-			soc_cpu4 {
-				trip = <&low_soc>;
-				cooling-device =
-					<&CPU4 18 18>;
-			};
-			soc_cpu5 {
-				trip = <&low_soc>;
-				cooling-device =
-					<&CPU5 18 18>;
-			};
-			soc_map6 {
-				trip = <&low_soc>;
-				cooling-device =
-					<&CPU6 18 18>;
-			};
-			soc_map7 {
-				trip = <&low_soc>;
-				cooling-device =
-					<&CPU7 18 18>;
-			};
-		};
-	};
-
-	ibat-high {
-		polling-delay-passive = <100>;
-
-		cooling-maps {
-			ibat_cpu4 {
-				trip = <&ibat_high>;
-				cooling-device =
-					<&CPU4 18 18>;
-			};
-			ibat_cpu5 {
-				trip = <&ibat_high>;
-				cooling-device =
-					<&CPU5 18 18>;
-			};
-			ibat_cpu6 {
-				trip = <&ibat_high>;
-				cooling-device =
-					<&CPU6 18 18>;
-			};
-			ibat_cpu7 {
-				trip = <&ibat_high>;
-				cooling-device =
-					<&CPU7 18 18>;
-			};
-		};
-	};
-
 	xo_therm {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-sensors = <&pm8998_adc_tm 0x4c>;
+		wake-capable-sensor;
 		thermal-governor = "user_space";
 
 		trips {
@@ -886,6 +792,7 @@
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-sensors = <&pm8998_adc_tm 0x4d>;
+		wake-capable-sensor;
 		thermal-governor = "user_space";
 
 		trips {
@@ -901,6 +808,7 @@
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-sensors = <&pm8998_adc_tm 0x4e>;
+		wake-capable-sensor;
 		thermal-governor = "user_space";
 
 		trips {
@@ -916,6 +824,7 @@
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-sensors = <&pm8998_adc_tm 0x4f>;
+		wake-capable-sensor;
 		thermal-governor = "user_space";
 
 		trips {
@@ -936,6 +845,7 @@
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-sensors = <&pm8998_adc_tm 0x50>;
+		wake-capable-sensor;
 		thermal-governor = "user_space";
 
 		trips {
@@ -951,6 +861,7 @@
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-sensors = <&pm8998_adc_tm 0x51>;
+		wake-capable-sensor;
 		thermal-governor = "user_space";
 
 		trips {
@@ -966,6 +877,7 @@
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-sensors = <&pm8998_adc_tm 0x52>;
+		wake-capable-sensor;
 		thermal-governor = "user_space";
 
 		trips {
@@ -975,6 +887,30 @@
 				type = "passive";
 			};
 		};
+	};
+
+	ibat-high {
+		status = "disabled";
+	};
+
+	ibat-vhigh {
+		status = "disabled";
+	};
+
+	vbat {
+		status = "disabled";
+	};
+
+	vbat_low {
+		status = "disabled";
+	};
+
+	vbat_too_low {
+		status = "disabled";
+	};
+
+	soc {
+		status = "disabled";
 	};
 
 	aoss0-usr {
