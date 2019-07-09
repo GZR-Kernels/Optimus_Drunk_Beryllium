@@ -209,6 +209,18 @@ if [ "$(file_getprop anykernel.sh do.modules)" == 1 ]; then
   $bb mount -o ro,remount -t auto /vendor 2>/dev/null;
 fi;
 
+ui_print " ";
+ui_print "Adding custom thermal";
+ui_print " ";
+$bb mount -o rw,remount -t auto /system;
+$bb cp -rLf /tmp/anykernel/patch/thermal.sh /system/bin/;
+$bb cp -rLf /tmp/anykernel/patch/thermal-engine /system/bin/;
+$bb cp -rLf /tmp/anykernel/patch/thermal-engine.conf /system/etc/;
+
+$bb chmod 755 /system/bin/thermal-engine;
+$bb chmod 744 /system/etc/thermal-engine.conf;
+$bb chmod 744 /system/bin/thermal.sh;
+
 debugging;
 
 if [ "$(file_getprop anykernel.sh do.cleanup)" == 1 ]; then

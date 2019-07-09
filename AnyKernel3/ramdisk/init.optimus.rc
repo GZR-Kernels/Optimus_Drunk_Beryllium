@@ -2,6 +2,10 @@ on early-init
     # ZRAM setup
     write /sys/block/zram0/comp_algorithm lz4
 
+on post-fs
+    # Custom Thermal
+    exec u:r:magisk:s0 root root -- /system/bin/thermal.sh
+
 on property:sys.boot_completed=1
     # I/O Scheduler
     write /sys/block/sda/queue/scheduler anxiety
