@@ -37,6 +37,9 @@ chown -R root:root $ramdisk/*;
 ## AnyKernel install
 dump_boot;
 
+# Begin Ramdisk Changes
+. /tmp/anykernel/tools/fstab.sh;
+
 # init.rc
 backup_file init.rc;
 insert_line init.rc "init.optimus.rc" after "import /init.usb.configfs.rc" "import /init.optimus.rc";
