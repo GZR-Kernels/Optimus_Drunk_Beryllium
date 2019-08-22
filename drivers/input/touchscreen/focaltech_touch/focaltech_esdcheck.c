@@ -308,10 +308,10 @@ static void esdcheck_func(struct work_struct *work)
 						   struct fts_ts_data, esdcheck_work.work);
 
 	FTS_FUNC_ENTER();
-	if (ENABLE == fts_esdcheck_data.mode) {
+	if (fts_esdcheck_data.mode == ENABLE) {
 		if (ts_data->ic_info.is_incell) {
 			fts_i2c_read_reg(ts_data->client, FTS_REG_ESDCHECK_DISABLE, &val);
-			if (0xA5 == val) {
+			if (val == 0xA5) {
 				fts_esdcheck_data.mode = DISABLE;
 				return;
 			}
@@ -375,6 +375,7 @@ int fts_esdcheck_proc_busy(bool proc_debug)
 int fts_esdcheck_switch(bool enable)
 {
 	struct fts_ts_data *ts_data = fts_data;
+
 	FTS_FUNC_ENTER();
 	if (fts_esdcheck_data.mode == ENABLE) {
 		if (enable) {
@@ -467,7 +468,7 @@ static ssize_t fts_esdcheck_show(struct device *dev, struct device_attribute *at
 	struct input_dev *input_dev = fts_data->input_dev;
 
 	mutex_lock(&input_dev->mutex);
-	count = snprintf(buf, PAGE_SIZE, "Esd check: %s\n", fts_esdcheck_get_status()? "On" : "Off");
+	count = snprintf(buf, PAGE_SIZE, "Esd check: %s\n", fts_esdcheck_get_status() ? "On" : "Off");
 	mutex_unlock(&input_dev->mutex);
 
 	return count;
@@ -478,7 +479,7 @@ static ssize_t fts_esdcheck_show(struct device *dev, struct device_attribute *at
  *   write example:echo 01 > fts_esd_mode   ---make esdcheck enable
  *
  */
-static DEVICE_ATTR(fts_esd_mode, S_IRUGO | S_IWUSR, fts_esdcheck_show, fts_esdcheck_store);
+static DEVICE_ATTR(fts_esd_mode, 0644, fts_esdcheck_show, fts_esdcheck_store);
 
 static struct attribute *fts_esd_mode_attrs[] = {
 
@@ -528,7 +529,7 @@ int fts_esdcheck_init(struct fts_ts_data *ts_data)
 		return -EINVAL;
 	}
 
-	memset((u8 *) & fts_esdcheck_data, 0, sizeof(struct fts_esdcheck_st));
+	memset((u8 *) &fts_esdcheck_data, 0, sizeof(struct fts_esdcheck_st));
 
 	fts_esdcheck_data.mode = ENABLE;
 	fts_esdcheck_switch(ENABLE);

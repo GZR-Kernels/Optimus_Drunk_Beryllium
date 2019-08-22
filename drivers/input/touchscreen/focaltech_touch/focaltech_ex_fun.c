@@ -79,7 +79,7 @@ static struct rwreg_operation_t {
 /*****************************************************************************
 * Static function prototypes
 *****************************************************************************/
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+#if (KERNEL_VERSION(3, 10, 0) <= LINUX_VERSION_CODE)
 /************************************************************************
 *   Name: fts_debug_write
 *  Brief:interface of write proc
@@ -418,18 +418,18 @@ static int fts_debug_read(char *page, char **start, off_t off, int count, int *e
 ***********************************************************************/
 int fts_create_apk_debug_channel(struct fts_ts_data *ts_data)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+#if (KERNEL_VERSION(3, 10, 0) <= LINUX_VERSION_CODE)
 	ts_data->proc = proc_create(PROC_NAME, 0777, NULL, &fts_proc_fops);
 #else
 	ts_data->proc = create_proc_entry(PROC_NAME, 0777, NULL);
 #endif
-	if (NULL == ts_data->proc) {
+	if (ts_data->proc == NULL) {
 		FTS_ERROR("create proc entry fail");
 		return -ENOMEM;
 	} else {
 		FTS_INFO("Create proc entry success!");
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0))
+#if (KERNEL_VERSION(3, 10, 0) > LINUX_VERSION_CODE)
 		ts_data->proc->write_proc = fts_debug_write;
 		ts_data->proc->read_proc = fts_debug_read;
 #endif
@@ -449,7 +449,7 @@ void fts_release_apk_debug_channel(struct fts_ts_data *ts_data)
 {
 
 	if (ts_data->proc) {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+#if (KERNEL_VERSION(3, 10, 0) <= LINUX_VERSION_CODE)
 		proc_remove(ts_data->proc);
 #else
 		remove_proc_entry(PROC_NAME, NULL);
@@ -560,7 +560,7 @@ static ssize_t fts_tprwreg_show(struct device *dev, struct device_attribute *att
 	if (rw_op.len < 0) {
 		count = snprintf(buf, PAGE_SIZE, "Invalid cmd line\n");
 	} else if (rw_op.len == 1) {
-		if (RWREG_OP_READ == rw_op.type) {
+		if (rw_op.type == RWREG_OP_READ) {
 			if (rw_op.res == 0) {
 				count = snprintf(buf, PAGE_SIZE, "Read %02X: %02X\n", rw_op.reg, rw_op.val);
 			} else {
@@ -574,7 +574,7 @@ static ssize_t fts_tprwreg_show(struct device *dev, struct device_attribute *att
 			}
 		}
 	} else {
-		if (RWREG_OP_READ == rw_op.type) {
+		if (rw_op.type == RWREG_OP_READ) {
 			count = snprintf(buf, PAGE_SIZE, "Read Reg: [%02X]-[%02X]\n", rw_op.reg, rw_op.reg + rw_op.len);
 			count += snprintf(buf + count, PAGE_SIZE, "Result: ");
 			if (rw_op.res) {
@@ -685,7 +685,7 @@ static int fts_parse_buf(const char *buf, size_t cmd_len)
 			return -ENOMEM;
 		}
 
-		if (RWREG_OP_WRITE == rw_op.type) {
+		if (rw_op.type == RWREG_OP_WRITE) {
 			tmpbuf[0] = rw_op.reg & 0xFF;
 			FTS_DEBUG("write buffer: ");
 			for (i = 1; i < rw_op.len; i++) {
@@ -722,12 +722,12 @@ static ssize_t fts_tprwreg_store(struct device *dev, struct device_attribute *at
 
 	FTS_DEBUG("cmd len: %d, buf: %s", (int)cmd_length, buf);
 	/* compatible old ops */
-	if (2 == cmd_length) {
+	if (cmd_length == 2) {
 		rw_op.type = RWREG_OP_READ;
 		rw_op.len = 1;
 
 		rw_op.reg = shex_to_int(buf, 2);
-	} else if (4 == cmd_length) {
+	} else if (cmd_length == 4) {
 		rw_op.type = RWREG_OP_WRITE;
 		rw_op.len = 1;
 		rw_op.reg = shex_to_int(buf, 2);
@@ -748,14 +748,16 @@ static ssize_t fts_tprwreg_store(struct device *dev, struct device_attribute *at
 		FTS_ERROR("cmd buffer error!");
 
 	} else {
-		if (RWREG_OP_READ == rw_op.type) {
+		if (rw_op.type == RWREG_OP_READ) {
 			if (rw_op.len == 1) {
 				u8 reg, val;
+
 				reg = rw_op.reg & 0xFF;
 				rw_op.res = fts_i2c_read_reg(client, reg, &val);
 				rw_op.val = val;
 			} else {
 				char reg;
+
 				reg = rw_op.reg & 0xFF;
 
 				rw_op.res = fts_i2c_read(client, &reg, 1, rw_op.opbuf, rw_op.len);
@@ -771,6 +773,7 @@ static ssize_t fts_tprwreg_store(struct device *dev, struct device_attribute *at
 		} else {
 			if (rw_op.len == 1) {
 				u8 reg, val;
+
 				reg = rw_op.reg & 0xFF;
 				val = rw_op.val & 0xFF;
 				rw_op.res = fts_i2c_write_reg(client, reg, val);
@@ -961,7 +964,7 @@ static ssize_t fts_dumpreg_show(struct device *dev, struct device_attribute *att
 }
 
 /* get the fw version  example:cat fw_version */
-static DEVICE_ATTR(fts_fw_version, S_IRUGO | S_IWUSR, fts_tpfwver_show, fts_tpfwver_store);
+static DEVICE_ATTR(fts_fw_version, 0644, fts_tpfwver_show, fts_tpfwver_store);
 
 /* read and write register(s)
 *   All data type is **HEX**
@@ -976,14 +979,14 @@ static DEVICE_ATTR(fts_fw_version, S_IRUGO | S_IWUSR, fts_tpfwver_show, fts_tpfw
 *  Get result:
 *       cat rw_reg
 */
-static DEVICE_ATTR(fts_rw_reg, S_IRUGO | S_IWUSR, fts_tprwreg_show, fts_tprwreg_store);
+static DEVICE_ATTR(fts_rw_reg, 0644, fts_tprwreg_show, fts_tprwreg_store);
 /*  upgrade from fw bin file   example:echo "*.bin" > fts_upgrade_bin */
-static DEVICE_ATTR(fts_upgrade_bin, S_IRUGO | S_IWUSR, fts_fwupgradebin_show, fts_fwupgradebin_store);
-static DEVICE_ATTR(fts_force_upgrade, S_IRUGO | S_IWUSR, fts_fwforceupg_show, fts_fwforceupg_store);
-static DEVICE_ATTR(fts_driver_version, S_IRUGO | S_IWUSR, fts_driverversion_show, fts_driverversion_store);
-static DEVICE_ATTR(fts_dump_reg, S_IRUGO | S_IWUSR, fts_dumpreg_show, fts_dumpreg_store);
-static DEVICE_ATTR(fts_hw_reset, S_IRUGO | S_IWUSR, fts_hw_reset_show, fts_hw_reset_store);
-static DEVICE_ATTR(fts_irq, S_IRUGO | S_IWUSR, fts_irq_show, fts_irq_store);
+static DEVICE_ATTR(fts_upgrade_bin, 0644, fts_fwupgradebin_show, fts_fwupgradebin_store);
+static DEVICE_ATTR(fts_force_upgrade, 0644, fts_fwforceupg_show, fts_fwforceupg_store);
+static DEVICE_ATTR(fts_driver_version, 0644, fts_driverversion_show, fts_driverversion_store);
+static DEVICE_ATTR(fts_dump_reg, 0644, fts_dumpreg_show, fts_dumpreg_store);
+static DEVICE_ATTR(fts_hw_reset, 0644, fts_hw_reset_show, fts_hw_reset_store);
+static DEVICE_ATTR(fts_irq, 0644, fts_irq_show, fts_irq_store);
 
 /* add your attr in here*/
 static struct attribute *fts_attributes[] = {

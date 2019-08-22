@@ -91,8 +91,8 @@
 #define FTS_TOUCH_DOWN                      0
 #define FTS_TOUCH_UP                        1
 #define FTS_TOUCH_CONTACT                   2
-#define EVENT_DOWN(flag)                    ((FTS_TOUCH_DOWN == flag) || (FTS_TOUCH_CONTACT == flag))
-#define EVENT_UP(flag)                      (FTS_TOUCH_UP == flag)
+#define EVENT_DOWN(flag)                    ((FTS_TOUCH_DOWN == flag) || (flag == FTS_TOUCH_CONTACT))
+#define EVENT_UP(flag)                      (flag == FTS_TOUCH_UP)
 #define EVENT_NO_DOWN(data)                 (!data->point_num)
 #define KEY_EN(data)                        (data->pdata->have_key)
 #define TOUCH_IS_KEY(y, key_y)              (y == key_y)

@@ -55,7 +55,7 @@
 #define FTS_CHIP_IDC            ((FTS_CHIP_TYPE & FLAGBIT(FLAG_IDC_BIT)) == FLAGBIT(FLAG_IDC_BIT))
 #define FTS_HID_SUPPORTTED      ((FTS_CHIP_TYPE & FLAGBIT(FLAG_HID_BIT)) == FLAGBIT(FLAG_HID_BIT))
 
-#define FTS_CHIP_TYPE_MAPPING {{0x0D,0x87, 0x19, 0x87, 0x19, 0x87, 0xA9, 0x87, 0xB9}}
+#define FTS_CHIP_TYPE_MAPPING {{0x0D, 0x87, 0x19, 0x87, 0x19, 0x87, 0xA9, 0x87, 0xB9} }
 
 #define I2C_BUFFER_LENGTH_MAXINUM           256
 #define FILE_NAME_LENGTH                    128
@@ -101,10 +101,10 @@
 
 #define kfree_safe(pbuf) do {\
     if (pbuf) {\
-        kfree(pbuf);\
-        pbuf = NULL;\
-    }\
-} while(0)
+	kfree(pbuf);\
+	pbuf = NULL;\
+    } \
+} while (0)
 
 /*****************************************************************************
 *  Alternative mode (When something goes wrong, the modules may be able to solve the problem.)
