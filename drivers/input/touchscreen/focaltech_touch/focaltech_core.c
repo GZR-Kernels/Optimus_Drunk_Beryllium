@@ -37,9 +37,6 @@
 #include <linux/notifier.h>
 #include <linux/fb.h>
 #include <drm/drm_notifier.h>
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-#include <linux/earlysuspend.h>
-#define FTS_SUSPEND_LEVEL 1	/* Early-suspend level */
 #endif
 #include <linux/hwinfo.h>
 
@@ -1532,38 +1529,6 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 
 	return 0;
 }
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-/*****************************************************************************
-*  Name: fts_ts_early_suspend
-*  Brief:
-*  Input:
-*  Output:
-*  Return:
-*****************************************************************************/
-static void fts_ts_early_suspend(struct early_suspend *handler)
-{
-	struct fts_ts_data *data = container_of(handler,
-						struct fts_ts_data,
-						early_suspend);
-
-	fts_ts_suspend(&data->client->dev);
-}
-
-/*****************************************************************************
-*  Name: fts_ts_late_resume
-*  Brief:
-*  Input:
-*  Output:
-*  Return:
-*****************************************************************************/
-static void fts_ts_late_resume(struct early_suspend *handler)
-{
-	struct fts_ts_data *data = container_of(handler,
-						struct fts_ts_data,
-						early_suspend);
-
-	fts_ts_resume(&data->client->dev);
-}
 #endif
 
 static int check_is_focal_touch(struct fts_ts_data *ts_data)
@@ -1800,11 +1765,6 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	if (ret) {
 		FTS_ERROR("[FB]Unable to register fb_notifier: %d", ret);
 	}
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-	ts_data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + FTS_SUSPEND_LEVEL;
-	ts_data->early_suspend.suspend = fts_ts_early_suspend;
-	ts_data->early_suspend.resume = fts_ts_late_resume;
-	register_early_suspend(&ts_data->early_suspend);
 #endif
 	update_hardware_info(TYPE_TOUCH, 3);
 	update_hardware_info(TYPE_TP_MAKER, ts_data->lockdown_info[0] - 0x30);
@@ -1887,8 +1847,6 @@ static int fts_ts_remove(struct i2c_client *client)
 #ifdef CONFIG_DRM
 	if (drm_unregister_client(&ts_data->fb_notif))
 		FTS_ERROR("Error occurred while unregistering fb_notifier.");
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-	unregister_early_suspend(&ts_data->early_suspend);
 #endif
 
 	free_irq(client->irq, ts_data);
