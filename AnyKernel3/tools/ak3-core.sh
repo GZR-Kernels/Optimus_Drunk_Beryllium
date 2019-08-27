@@ -22,7 +22,7 @@ ui_print() {
 
 # abort ["<text>" [...]]
 abort() {
-  ui_print " " "$*";
+  ui_print " " "$@";
   exit 1;
 }
 
@@ -34,6 +34,30 @@ contains() {
 # file_getprop <file> <property>
 file_getprop() {
   grep "^$2=" "$1" | cut -d= -f2-;
+}
+###
+
+### file/directory attributes functions:
+# set_perm <owner> <group> <mode> <file> [<file2> ...]
+set_perm() {
+  local uid gid mod;
+  uid=$1; gid=$2; mod=$3;
+  shift 3;
+  chown $uid:$gid "$@" || chown $uid.$gid "$@";
+  chmod $mod "$@";
+}
+
+# set_perm_recursive <owner> <group> <dir_mode> <file_mode> <dir> [<dir2> ...]
+set_perm_recursive() {
+  local uid gid dmod fmod;
+  uid=$1; gid=$2; dmod=$3; fmod=$4;
+  shift 4;
+  while [ "$1" ]; do
+    chown -R $uid:$gid "$1" || chown -R $uid.$gid "$1";
+    find "$1" -type d -exec chmod $dmod {} +;
+    find "$1" -type f -exec chmod $fmod {} +;
+    shift;
+  done;
 }
 ###
 
@@ -128,11 +152,11 @@ unpack_ramdisk() {
   fi;
 
   if [ -f ramdisk.cpio ]; then
-    comp=$($bin/magiskboot decompress ramdisk.cpio 2>&1 | head -n1 | cut -d[ -f2 | cut -d] -f1 | grep -v 'compressed');
+    comp=$($bin/magiskboot decompress ramdisk.cpio 2>&1 | grep -v 'raw' | sed -n 's;.*\[\(.*\)\];\1;p');
   else
     abort "No ramdisk found to unpack. Aborting...";
   fi;
-  if [ "$comp" -a "$comp" != "raw" ]; then
+  if [ "$comp" ]; then
     mv -f ramdisk.cpio ramdisk.cpio.$comp;
     $bin/magiskboot decompress ramdisk.cpio.$comp ramdisk.cpio;
     if [ $? != 0 ]; then
@@ -209,7 +233,7 @@ repack_ramdisk() {
 
 # flash_boot (build, sign and write image only)
 flash_boot() {
-  local varlist kernel ramdisk cmdline part0 part1 signfail pk8 cert avbtype;
+  local varlist kernel ramdisk cmdline part0 part1 nocompflag signfail pk8 cert avbtype;
 
   cd $split_img;
   if [ -f "$bin/mkimage" ]; then
@@ -287,7 +311,10 @@ flash_boot() {
     for i in dtb recovery_dtbo; do
       test "$(eval echo \$$i)" -a -f $i && cp -f $(eval echo \$$i) $i;
     done;
-    $bin/magiskboot repack $bootimg $home/boot-new.img;
+    case $ramdisk_compression in
+      none|cpio) nocompflag="-n";;
+    esac;
+    $bin/magiskboot repack $nocompflag $bootimg $home/boot-new.img;
   fi;
   if [ $? != 0 ]; then
     abort "Repacking image failed. Aborting...";
@@ -579,7 +606,8 @@ reset_ak() {
       test -e $i && cp -af $i $current;
     done;
   fi;
-  rm -rf $bootimg $ramdisk $split_img $home/*-new* $home/*-files/current;
+  test -d $split_img && rm -rf $ramdisk;
+  rm -rf $bootimg $split_img $home/*-new* $home/*-files/current;
 
   if [ "$1" == "keep" ]; then
     test -d $home/rdtmp && mv -f $home/rdtmp $ramdisk;
@@ -650,7 +678,9 @@ setup_ak() {
             else
               abort "Unable to determine mtd $block partition. Aborting...";
             fi;
-            target=/dev/mtd/$mtdname;
+            if [ -e /dev/mtd/$mtdname ]; then
+              target=/dev/mtd/$mtdname;
+            fi;
           elif [ -e /dev/block/by-name/$part ]; then
             target=/dev/block/by-name/$part;
           elif [ -e /dev/block/bootdevice/by-name/$part ]; then
@@ -662,7 +692,7 @@ setup_ak() {
           elif [ -e /dev/$part ]; then
             target=/dev/$part;
           fi;
-          test -e "$target" && break 2;
+          test "$target" && break 2;
         done;
       done;
       if [ "$target" ]; then
