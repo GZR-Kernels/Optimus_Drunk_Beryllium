@@ -44,14 +44,6 @@ dump_boot;
 backup_file init.rc;
 insert_line init.rc "init.optimus.rc" after "import /init.usb.configfs.rc" "import /init.optimus.rc";
 
-# Display if using MIUI or a custom ROM
-is_miui="$(file_getprop /system/build.prop 'ro.miui.ui.version.code')"
-if [[ -z $is_miui ]]; then
-    ui_print "You are running a custom ROM!"
-else
-    ui_print "You are running MIUI!"
-fi
-
 write_boot;
 ## end install
 
