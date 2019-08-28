@@ -6,8 +6,8 @@ DATE_POSTFIX=$(date +"%Y%m%d")
 
 ## Copy this script inside the kernel directory
 KERNEL_DIR=$PWD
-KERNEL_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/aarch64-elf-gcc-9.1.0/bin/aarch64-elf-
-ARM32_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/arm-eabi-gcc-9.1.0/bin/arm-eabi-
+KERNEL_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/aarch64-elf-gcc-9.2.0/bin/aarch64-elf-
+ARM32_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/arm-eabi-gcc-9.2.0/bin/arm-eabi-
 KERNEL_DEFCONFIG=beryllium_defconfig
 ANY_KERNEL3_DIR=$KERNEL_DIR/AnyKernel3/
 FINAL_KERNEL_ZIP=Optimus_Drunk_Beryllium-$DATE_POSTFIX.zip
