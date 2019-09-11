@@ -62,8 +62,6 @@
 			qcom,panel-supply-entries = < 0x360 >;
 			qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 			qcom,platform-reset-gpio = < 0x3c 0x06 0x00 >;
-			linux,phandle = < 0x366 >;
-			phandle = < 0x366 >;
 
 			qcom,mdss-dsi-display-timings {
 
