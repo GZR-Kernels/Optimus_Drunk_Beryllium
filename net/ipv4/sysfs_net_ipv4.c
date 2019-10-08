@@ -17,6 +17,7 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/android_version.h>
 #include <linux/kobject.h>
 #include <linux/string.h>
 #include <linux/sysfs.h>
@@ -71,6 +72,10 @@ static __init int sysfs_ipv4_init(void)
 {
 	struct kobject *ipv4_kobject;
 	int ret;
+
+	/* Q userspace no longer requires these tunables */
+	if (get_android_version() >= 10)
+		return 0;
 
 	ipv4_kobject = kobject_create_and_add("ipv4", kernel_kobj);
 	if (!ipv4_kobject)
