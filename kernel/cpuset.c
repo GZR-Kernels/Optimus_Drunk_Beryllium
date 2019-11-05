@@ -54,6 +54,7 @@
 #include <linux/time64.h>
 #include <linux/backing-dev.h>
 #include <linux/sort.h>
+#include <linux/binfmts.h>
 
 #include <asm/uaccess.h>
 #include <linux/atomic.h>
@@ -1799,7 +1800,7 @@ static ssize_t cpuset_write_resmask_wrapper(struct kernfs_open_file *of,
 	struct cpuset *cs = css_cs(of_css(of));
 	int i;
 
-	if (!strcmp(current->comm, "init")) {
+	if (task_is_booster(current)) {
 		for (i = 0; i < ARRAY_SIZE(cs_targets); i++) {
 			struct cs_target tgt = cs_targets[i];
 
