@@ -1273,7 +1273,7 @@ stop:
 
 	put_gc_inode(&gc_list);
 
-	if (sync)
+	if (sync && !ret)
 		ret = sec_freed ? 0 : -EAGAIN;
 
 	if (gc_type == FG_GC && down_read_trylock(&sb->s_umount)) {
