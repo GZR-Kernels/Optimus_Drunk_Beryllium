@@ -6,8 +6,9 @@ DATE_POSTFIX=$(date +"%Y%m%d")
 
 ## Copy this script inside the kernel directory
 KERNEL_DIR=$PWD
-KERNEL_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/aarch64-elf-9.2.0/bin/aarch64-elf-
-ARM32_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/arm-eabi-9.2.0/bin/arm-eabi-
+CLANG_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/clang-r370808/bin/clang-10
+KERNEL_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/aarch64-linux-android-4.9/bin/aarch64-linux-android-
+ARM32_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
 KERNEL_DEFCONFIG=beryllium_defconfig
 ANY_KERNEL3_DIR=$KERNEL_DIR/AnyKernel3/
 FINAL_KERNEL_ZIP=Optimus_Drunk_Beryllium_Pie-$DATE_POSTFIX.zip
@@ -26,6 +27,7 @@ export CROSS_COMPILE=$KERNEL_TOOLCHAIN
 export CROSS_COMPILE_ARM32=$ARM32_TOOLCHAIN
 export ARCH=arm64
 export SUBARCH=arm64
+export KBUILD_COMPILER_STRING="Clang Version 10.0.1"
 
 # Clean build always lol
 echo "**** Cleaning ****"
@@ -37,7 +39,7 @@ echo -e "$blue***********************************************"
 echo "          BUILDING KERNEL          "
 echo -e "***********************************************$nocol"
 make $KERNEL_DEFCONFIG O=out
-make -j$(nproc --all) O=out
+make -j$(nproc --all) CC=$CLANG_TOOLCHAIN CLANG_TRIPLE=aarch64-linux-gnu- O=out
 
 echo "**** Verify Image.gz-dtb ****"
 ls $KERNEL_DIR/out/arch/arm64/boot/Image.gz-dtb
