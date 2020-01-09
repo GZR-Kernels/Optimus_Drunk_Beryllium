@@ -6,7 +6,7 @@ DATE_POSTFIX=$(date +"%Y%m%d")
 
 ## Copy this script inside the kernel directory
 KERNEL_DIR=$PWD
-CLANG_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/clang-r370808/bin/clang-10
+CLANG_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/clang-6032204/bin/clang-10
 KERNEL_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/aarch64-linux-android-4.9/bin/aarch64-linux-android-
 ARM32_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
 KERNEL_DEFCONFIG=beryllium_defconfig
