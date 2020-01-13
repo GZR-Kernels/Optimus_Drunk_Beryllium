@@ -57,7 +57,7 @@ cd $ANY_KERNEL3_DIR/
 zip -r9 $FINAL_KERNEL_ZIP * -x README $FINAL_KERNEL_ZIP
 cp $KERNEL_DIR/AnyKernel3/$FINAL_KERNEL_ZIP $ANDROIDDIR/kernel/$FINAL_KERNEL_ZIP
 
-echo "**** Good Bye!! ****"
+echo "**** Done, here is your sha1 ****"
 cd $KERNEL_DIR
 rm -rf $ANY_KERNEL3_DIR/$FINAL_KERNEL_ZIP
 rm -rf AnyKernel3/Image.gz-dtb
@@ -66,3 +66,4 @@ rm -rf $KERNEL_DIR/out/
 BUILD_END=$(date +"%s")
 DIFF=$(($BUILD_END - $BUILD_START))
 echo -e "$yellow Build completed in $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds.$nocol"
+sha1sum $ANDROIDDIR/kernel/$FINAL_KERNEL_ZIP
