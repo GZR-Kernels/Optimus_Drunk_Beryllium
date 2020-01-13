@@ -2,8 +2,6 @@
 
 #set -e
 
-DATE_POSTFIX=$(date +"%Y%m%d")
-
 ## Copy this script inside the kernel directory
 KERNEL_DIR=$PWD
 CLANG_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/clang-6032204/bin/clang-10
@@ -11,7 +9,7 @@ KERNEL_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/aarch64-linux-android-4.9/bin/aarc
 ARM32_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
 KERNEL_DEFCONFIG=beryllium_defconfig
 ANY_KERNEL3_DIR=$KERNEL_DIR/AnyKernel3/
-FINAL_KERNEL_ZIP=Optimus_Drunk_Beryllium_10-$DATE_POSTFIX.zip
+FINAL_KERNEL_ZIP=Optimus_Drunk_Beryllium_v10.1.zip
 # Speed up build process
 MAKE="./makeparallel"
 
