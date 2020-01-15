@@ -14,6 +14,6 @@ ui_print " "; ui_print "Add modified fstab with f2fs mount points..."; ui_print 
 umount /vendor || true
 mount -o rw /dev/block/bootdevice/by-name/vendor /vendor
 chmod -R 644 /tmp/anykernel/ramdisk/fstab.qcom;
-exec_util "cp -a /tmp/anykernel/ramdisk/fstab.qcom /vendor/etc/"
+exec_util "cp -af /tmp/anykernel/ramdisk/fstab.qcom /vendor/etc/"
 rm $ramdisk/fstab.qcom
 umount /vendor || true
