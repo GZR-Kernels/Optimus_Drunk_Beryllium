@@ -1,1 +1,4 @@
-* Initial version release (instead of date) 
+* Updated to 4.9.210
+* Bluetooth updated to Xiaomi Q Source
+* Updated Anykernel3, you now don't have to flash magisk again after flashing kernel
+* Blocked some wakelocks
