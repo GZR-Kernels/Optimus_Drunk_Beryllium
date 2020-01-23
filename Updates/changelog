@@ -1,4 +1,4 @@
-* Updated to 4.9.210
-* Bluetooth updated to Xiaomi Q Source
-* Updated Anykernel3, you now don't have to flash magisk again after flashing kernel
-* Blocked some wakelocks
+* Added CPU Input Boost
+* Added FK Profiles support (Battery, Balance (Default) & Performance)
+* Underclocked GPU to 170 mhz
+* Miui 11 Android 10 Camera support will be added when CrDroid moves to Q Vendor
