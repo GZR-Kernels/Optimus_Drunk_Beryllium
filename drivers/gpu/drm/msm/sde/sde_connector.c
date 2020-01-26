@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1547,6 +1547,9 @@ static ssize_t _sde_debugfs_conn_cmd_tx_sts_read(struct file *file,
 		SDE_ERROR("snprintf failed, blen %d\n", blen);
 		return 0;
 	}
+
+	if (blen > count)
+		blen = count;
 
 	if (copy_to_user(buf, buffer, blen)) {
 		SDE_ERROR("copy to user buffer failed\n");
