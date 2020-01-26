@@ -1,4 +1,3 @@
-* Added CPU Input Boost
-* Added FK Profiles support (Battery, Balance (Default) & Performance)
-* Underclocked GPU to 170 mhz
-* Miui 11 Android 10 Camera support will be added when CrDroid moves to Q Vendor
+* Updated to 4.9.211
+* Added Devfreq Boost
+* Added DTS Eagle Support
