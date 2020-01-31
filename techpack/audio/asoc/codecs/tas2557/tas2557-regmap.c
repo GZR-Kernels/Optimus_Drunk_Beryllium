@@ -391,7 +391,7 @@ static void irq_work_routine(struct work_struct *work)
 	mutex_lock(&pTAS2557->file_lock);
 #endif
 
-	if(pTAS2557->mnErrCode & ERROR_FAILSAFE)
+	if (pTAS2557->mnErrCode & ERROR_FAILSAFE)
 		goto program;
 
 	if (pTAS2557->mbRuntimeSuspend) {
