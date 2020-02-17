@@ -1,0 +1,38 @@
+on property:sys.boot_completed=1
+    # allows FK Kernel Manager to know this feature is supported
+    setprop fku.profiles 1
+
+    # I/O Scheduler
+    write /sys/block/sda/queue/scheduler maple
+    write /sys/block/sdb/queue/scheduler maple
+    write /sys/block/sdc/queue/scheduler maple
+    write /sys/block/sdd/queue/scheduler maple
+    write /sys/block/sde/queue/scheduler maple
+    write /sys/block/sdf/queue/scheduler maple
+    write /sys/block/dm-0/queue/scheduler maple
+
+    # Runtime FS tuning: as we have init boottime setting and kernel patch setting
+    # default readahead to 2048KB. We should adjust the setting upon boot_complete
+    # for runtime performance
+    write /sys/block/sda/queue/read_ahead_kb 128
+    write /sys/block/sda/queue/nr_requests 128
+    write /sys/block/sda/queue/iostats 1
+    write /sys/block/sdb/queue/read_ahead_kb 128
+    write /sys/block/sdb/queue/nr_requests 128
+    write /sys/block/sdb/queue/iostats 1
+    write /sys/block/sdc/queue/read_ahead_kb 128
+    write /sys/block/sdc/queue/nr_requests 128
+    write /sys/block/sdc/queue/iostats 1
+    write /sys/block/sdd/queue/read_ahead_kb 128
+    write /sys/block/sdd/queue/nr_requests 128
+    write /sys/block/sdd/queue/iostats 1
+    write /sys/block/sde/queue/read_ahead_kb 128
+    write /sys/block/sde/queue/nr_requests 128
+    write /sys/block/sde/queue/iostats 1
+    write /sys/block/sdf/queue/read_ahead_kb 128
+    write /sys/block/sdf/queue/nr_requests 128
+    write /sys/block/sdf/queue/iostats 1
+    write /sys/block/dm-0/queue/read_ahead_kb 128
+    write /sys/block/dm-1/queue/read_ahead_kb 128
+    write /sys/block/dm-2/queue/read_ahead_kb 128
+    write /sys/block/dm-3/queue/read_ahead_kb 128
