@@ -1,5 +1,2 @@
-* Built with clang 10.0.4
-* Removed CAF's hispeed & predicted load
-* Disabled iowait boost by default
-* Set default schedutil rate-limits (can be changed in kernel managers)
-* Added some powersaving features for cpu & display
+* Rebased on Lineage kernel again
+* Updated to 4.9.215 & latest AnyKernel3
