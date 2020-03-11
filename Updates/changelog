@@ -1,2 +1,2 @@
-* Rebased on Lineage kernel again
-* Updated to 4.9.215 & latest AnyKernel3
+* Fixed network speed monitor in MIUI
+* Updated to 4.9.216
