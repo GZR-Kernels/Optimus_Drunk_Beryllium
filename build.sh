@@ -4,7 +4,7 @@
 
 ## Copy this script inside the kernel directory
 KERNEL_DIR=$PWD
-CLANG_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/clang-6207600/bin/clang-10
+CLANG_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/clang-6284175/bin/clang-10
 KERNEL_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/aarch64-linux-android-4.9/bin/aarch64-linux-android-
 ARM32_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
 KERNEL_DEFCONFIG=beryllium_defconfig
@@ -25,7 +25,7 @@ export CROSS_COMPILE=$KERNEL_TOOLCHAIN
 export CROSS_COMPILE_ARM32=$ARM32_TOOLCHAIN
 export ARCH=arm64
 export SUBARCH=arm64
-export KBUILD_COMPILER_STRING="Clang Version 10.0.4"
+export KBUILD_COMPILER_STRING="Clang Version 10.0.5"
 
 # Clean build always lol
 echo "**** Cleaning ****"
