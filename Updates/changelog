@@ -1,2 +1,3 @@
-* Fixed network speed monitor in MIUI
-* Updated to 4.9.216
+* Updated to 4.9.217
+* Updated Wireguard to 20200318
+* Built with Clang 10.0.5
