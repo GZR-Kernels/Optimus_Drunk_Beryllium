@@ -3,13 +3,12 @@
 #set -e
 
 ## Copy this script inside the kernel directory
-KERNEL_DIR=$PWD
-CLANG_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/clang-6284175/bin/clang-10
-KERNEL_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/aarch64-linux-android-4.9/bin/aarch64-linux-android-
-ARM32_TOOLCHAIN=$ANDROIDDIR/kernel/prebuilts/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
+CLANG_TOOLCHAIN=$KERNELDIR/prebuilts/clang-6284175/bin/clang-10
+KERNEL_TOOLCHAIN=$KERNELDIR/prebuilts/aarch64-linux-android-4.9/bin/aarch64-linux-android-
+ARM32_TOOLCHAIN=$KERNELDIR/prebuilts/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
 KERNEL_DEFCONFIG=beryllium_defconfig
-ANY_KERNEL3_DIR=$KERNEL_DIR/AnyKernel3/
-FINAL_KERNEL_ZIP=Optimus_Drunk_Beryllium_v10.12.zip
+ANYKERNEL3_DIR=$PWD/AnyKernel3/
+FINAL_KERNEL_ZIP=Optimus_Drunk_Beryllium_v10.13.zip
 # Speed up build process
 MAKE="./makeparallel"
 
@@ -40,30 +39,30 @@ make $KERNEL_DEFCONFIG O=out
 make -j$(nproc --all) CC=$CLANG_TOOLCHAIN CLANG_TRIPLE=aarch64-linux-gnu- O=out
 
 echo "**** Verify Image.gz-dtb ****"
-ls $KERNEL_DIR/out/arch/arm64/boot/Image.gz-dtb
+ls $PWD/out/arch/arm64/boot/Image.gz-dtb
 
 #Anykernel 2 time!!
 echo "**** Verifying AnyKernel3 Directory ****"
-ls $ANY_KERNEL3_DIR
+ls $ANYKERNEL3_DIR
 echo "**** Removing leftovers ****"
-rm -rf $ANY_KERNEL3_DIR/Image.gz-dtb
-rm -rf $ANY_KERNEL3_DIR/$FINAL_KERNEL_ZIP
+rm -rf $ANYKERNEL3_DIR/Image.gz-dtb
+rm -rf $ANYKERNEL3_DIR/$FINAL_KERNEL_ZIP
 
 echo "**** Copying Image.gz-dtb ****"
-cp $KERNEL_DIR/out/arch/arm64/boot/Image.gz-dtb $ANY_KERNEL3_DIR/
+cp $PWD/out/arch/arm64/boot/Image.gz-dtb $ANYKERNEL3_DIR/
 
 echo "**** Time to zip up! ****"
-cd $ANY_KERNEL3_DIR/
+cd $ANYKERNEL3_DIR/
 zip -r9 $FINAL_KERNEL_ZIP * -x README $FINAL_KERNEL_ZIP
-cp $KERNEL_DIR/AnyKernel3/$FINAL_KERNEL_ZIP $ANDROIDDIR/kernel/$FINAL_KERNEL_ZIP
+cp $ANYKERNEL3_DIR/$FINAL_KERNEL_ZIP $KERNELDIR/$FINAL_KERNEL_ZIP
 
 echo "**** Done, here is your sha1 ****"
-cd $KERNEL_DIR
-rm -rf $ANY_KERNEL3_DIR/$FINAL_KERNEL_ZIP
-rm -rf AnyKernel3/Image.gz-dtb
-rm -rf $KERNEL_DIR/out/
+cd ..
+rm -rf $ANYKERNEL3_DIR/$FINAL_KERNEL_ZIP
+rm -rf $ANYKERNEL3_DIR/Image.gz-dtb
+rm -rf out/
 
 BUILD_END=$(date +"%s")
 DIFF=$(($BUILD_END - $BUILD_START))
 echo -e "$yellow Build completed in $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds.$nocol"
-sha1sum $ANDROIDDIR/kernel/$FINAL_KERNEL_ZIP
+sha1sum $KERNELDIR/$FINAL_KERNEL_ZIP
