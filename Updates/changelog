@@ -1,3 +1,5 @@
-* Updated to 4.9.218
-* Updated Wireguard to 1.0.20200401
-* Updated GPS to Xiaomi Q Source
+* Updated to 4.9.219
+* Updated tolatest CAF tag
+* Built with Clang 10.0.6
+* Removed sched boost logcat spam
+
