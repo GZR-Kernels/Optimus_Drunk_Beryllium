@@ -8,7 +8,7 @@ KERNEL_TOOLCHAIN=$KERNELDIR/prebuilts/aarch64-linux-android-4.9/bin/aarch64-linu
 ARM32_TOOLCHAIN=$KERNELDIR/prebuilts/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
 KERNEL_DEFCONFIG=beryllium_defconfig
 ANYKERNEL3_DIR=$PWD/AnyKernel3/
-FINAL_KERNEL_ZIP=Optimus_Drunk_Beryllium_v10.15.zip
+FINAL_KERNEL_ZIP=Optimus_Drunk_Beryllium_v10.16.zip
 # Speed up build process
 MAKE="./makeparallel"
 
