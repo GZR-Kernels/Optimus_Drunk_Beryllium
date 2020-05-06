@@ -1,4 +1,2 @@
-* Updated to 4.9.221
-* Increased max charging current even higher with better thermal control
-* Other thermal fixes
-* Updated wireguard to 1.0.20200429
+* Updated to 4.9.222
+* Enabled lz4 compression for Zram
