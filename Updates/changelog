@@ -1,2 +1,2 @@
-* Rebased on Lineage kernel source
-* Fixed slow charging
+* Updated to 4.9.224
+* Updated wireguard to 1.0.20200520
