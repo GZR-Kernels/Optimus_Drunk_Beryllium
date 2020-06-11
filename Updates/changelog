@@ -1,2 +1,2 @@
-* Updated to 4.9.226
-* Inline with latest Lineage OS kernel
+* Updated to 4.9.227
+* Kernel is now built with proton clang
