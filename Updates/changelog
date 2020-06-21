@@ -1,2 +1,3 @@
-* Updated to 4.9.227
-* Kernel is now built with proton clang
+* Updated to 4.9.228
+* Updated proton clang to 20200620
+* Updated wireguard to 1.0.20200611
