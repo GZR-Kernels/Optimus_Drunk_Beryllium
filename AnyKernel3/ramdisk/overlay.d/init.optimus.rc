@@ -1,6 +1,4 @@
 on property:sys.boot_completed=1
-    # allows FK Kernel Manager to know this feature is supported
-    setprop fku.profiles 1
 
     # I/O Scheduler
     write /sys/block/sda/queue/scheduler maple
