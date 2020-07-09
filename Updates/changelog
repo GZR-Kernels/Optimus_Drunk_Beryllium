@@ -1,2 +1,4 @@
-* Updated to 4.9.229
-* Updated wireguard to 1.0.20200623
+* Updated to 4.9.230
+* Added Spectrum support
+* Removed fk performance profiles
+* Enabled zswap/vnswap
