@@ -5,7 +5,7 @@
 ## Copy this script inside the kernel directory
 KERNEL_DEFCONFIG=beryllium_defconfig
 ANYKERNEL3_DIR=$PWD/AnyKernel3/
-FINAL_KERNEL_ZIP=Optimus_Drunk_Beryllium_v10.26.zip
+FINAL_KERNEL_ZIP=Optimus_Drunk_Beryllium_v10.27.zip
 export PATH="$KERNELDIR/prebuilts/proton-clang/bin:${PATH}"
 export ARCH=arm64
 export SUBARCH=arm64

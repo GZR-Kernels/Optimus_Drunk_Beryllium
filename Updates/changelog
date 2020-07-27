@@ -1,4 +1,5 @@
-* Updated to 4.9.230
-* Added Spectrum support
-* Removed fk performance profiles
-* Enabled zswap/vnswap
+* Updated to 4.9.231
+* Updated wireguard to 1.0.20200712
+* Fixed fake temps
+* Fixed charging for "those" people
+* Removed fk performance profiles for real now
