@@ -1,11 +1,11 @@
  {
   "kernel": {
     "name": "Optimus Drunk Beryllium",
-    "version": "v10.27",
-    "link": "https://github.com/GZR-Kernels/Optimus_Drunk_Beryllium/releases/download/v10.27/Optimus_Drunk_Beryllium_v10.27.zip",
+    "version": "v10.28",
+    "link": "https://github.com/GZR-Kernels/Optimus_Drunk_Beryllium/releases/download/v10.28/Optimus_Drunk_Beryllium_v10.28.zip",
     "changelog_url": "https://raw.githubusercontent.com/GZR-Kernels/Optimus_Drunk_Beryllium/10.0/Updates/changelog",
-    "date": "2020-07-27",
-    "sha1": "e7cc074e36dd5cac0156f7b54ad74ea3ce1c8f4b"
+    "date": "2020-08-10",
+    "sha1": "5363560f202f2b1328de017298677de91a2ccee3"
   },
   "support": {
     "link": "https://forum.xda-developers.com/poco-f1/development/kernel-optimus-drunk-kernel-t3936450"

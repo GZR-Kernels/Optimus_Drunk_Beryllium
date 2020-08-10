@@ -1,5 +1,4 @@
-* Updated to 4.9.231
-* Updated wireguard to 1.0.20200712
-* Fixed fake temps
-* Fixed charging for "those" people
-* Removed fk performance profiles for real now
+* Updated to 4.9.232
+* Updated wireguard to 1.0.20200729
+* Added exfat from arter
+* Built with proton-clang 20200808
