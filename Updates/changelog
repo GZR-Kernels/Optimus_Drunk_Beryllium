@@ -1,4 +1,3 @@
-* Updated to 4.9.232
-* Updated wireguard to 1.0.20200729
-* Added exfat from arter
-* Built with proton-clang 20200808
+* Updated to 4.9.233
+* Removed vnswap & zswap
+* Reverted to zram
