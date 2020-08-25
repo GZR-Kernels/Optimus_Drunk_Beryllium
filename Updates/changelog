@@ -1,3 +1,2 @@
-* Updated to 4.9.233
-* Removed vnswap & zswap
-* Reverted to zram
+* Rebased on LOS kernel and a lot of cleanup
+* Enabled zram on boot
