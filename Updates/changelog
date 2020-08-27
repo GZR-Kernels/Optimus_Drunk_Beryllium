@@ -1,2 +1,3 @@
-* Rebased on LOS kernel and a lot of cleanup
-* Enabled zram on boot
+* Updated to 4.9.234
+* Relaxed charging a bit more
+* Fixed network monitor on MIUI
