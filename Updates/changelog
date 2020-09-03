@@ -1,3 +1,2 @@
-* Updated to 4.9.234
-* Relaxed charging a bit more
-* Fixed network monitor on MIUI
+* Updated to 4.9.235
+* Update stock defconfig (fixes pop up on boot on some roms)
