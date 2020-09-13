@@ -1,2 +1,2 @@
-* Updated to 4.9.235
-* Update stock defconfig (fixes pop up on boot on some roms)
+* Updated to 4.9.236
+* Updated Wireguard to 1.0.20200908
