@@ -1,2 +1,5 @@
-* Updated to 4.9.246
-* Added Pixel thermal support
+* Updated to 4.9.247
+* Removed CPU Input Boost, Devfreq Boost & Dynamic Stune Boost
+* Removed Spectrum until it works on A11
+* Added CPUSet & Stune assist
+* Please dirty/clean flash rom before flashing this
