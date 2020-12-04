@@ -1,5 +1,4 @@
-* Updated to 4.9.247
-* Removed CPU Input Boost, Devfreq Boost & Dynamic Stune Boost
-* Removed Spectrum until it works on A11
-* Added CPUSet & Stune assist
-* Please dirty/clean flash rom before flashing this
+* Rebased on LOS kernel
+* Fixed cpu freqs being stuck
+* Cleaned up a lot of commits
+* Should work on Android 10 roms as well
