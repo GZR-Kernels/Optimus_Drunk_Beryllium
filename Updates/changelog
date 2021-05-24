@@ -1,2 +1,4 @@
-* Updated to 4.9.268 & LA.UM.9.3.r1-01700-sdm845.0 CAF tag
+* Updated to 4.9.269
+* Merged latest Lineage kernel changes
+* Updated wireguard to 1.0.20210424
 
